@@ -131,7 +131,7 @@ function bucket_training_set(dataset)
         for j=1,length do sentence[j] = dataset[start + j - 1][2] end
         for j=1,length do label[j] = dataset[start + j][2] end
         if buckets[length] == nil then
-            buckets[length] = {sentence,label}
+            buckets[length] = {{sentence,label}}
         else
             buckets[length][#(buckets[length]) + 1] = {sentence, label}
         end
@@ -142,11 +142,12 @@ function bucket_training_set(dataset)
             local remaining = #samples - (i - 1)
             local batch = torch.IntTensor(math.min(50, remaining), seq_length)
             local labels = torch.IntTensor(math.min(50, remaining), seq_length)
-            print(batch:size(), labels:size())
-            for j=1, batch:size()[1] do
-                batch[j] = samples[i][1]
-                labels[j] = samples[i][2]
-                i = i + 1
+            for j=1, batch:size()[1] - 1 do
+                if i <= #samples then
+                    batch[j] = samples[i][1]
+                    labels[j] = samples[i][2]
+                    i = i + 1
+                end
             end
             batches[#batches + 1] = {batch, labels:reshape(math.min(50, remaining) * seq_length)}
         end

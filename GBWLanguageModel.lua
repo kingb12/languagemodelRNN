@@ -6,7 +6,7 @@
 -- To change this template use File | Settings | File Templates.
 --
 
-package.path = ';/Users/bking/IdeaProjects/LanguageModelRNN/?.lua;'..package.path
+package.path = ';/homes/iws/kingb12/LanguageModelRNN/?.lua;'..package.path
 
 require 'torch'
 require 'nn'
@@ -21,11 +21,11 @@ embeddingSize = 100
 accUpdate = false
 pretrain = true
 pretrained_file = ""
-learningRate = 0.1
+learningRate = 0.5
 hiddenSize = 100
-train_file = "/Users/bking/data/BillionWords/50k_V_train_tiny.th7"
-word_map_file = "/Users/bking/data/BillionWords/50k_V_word_map.th7"
-word_freq_file = "/Users/bking/data/BillionWords/50k_V_word_freq.th7"
+train_file = "/homes/iws/kingb12/data/BillionWords/50k_V_train_small.th7"
+word_map_file = "/homes/iws/kingb12/data/BillionWords/50k_V_word_map.th7"
+word_freq_file = "/homes/iws/kingb12/data/BillionWords/50k_V_word_freq.th7"
 inputSize = embeddingSize
 seq_length = 50
 batch_size = 5
@@ -44,9 +44,8 @@ wfreq = torch.load(word_freq_file) -- relative word frequencies. Used for SoftMa
 -- where each training example is a sequence of seqLength words.
 
 train_set = bucket_training_set(ds)
-
 function train_set:size()
-    return inputs:size()[1]
+    return #train_set
 end
 -- The Word Embedding Layer --
 
@@ -85,22 +84,17 @@ criterion = nn.ClassNLLCriterion()
 sgd_trainer = nn.StochasticGradient(lm, criterion)
 sgd_trainer.learningRate = learningRate
 sgd_trainer.learningRateDecay = 0.5
-sgd_trainer.maxIteration = 5
+sgd_trainer.maxIteration = 25
 sgd_trainer._example_Number = 1
 local function print_info(self, iteration, currentError)
     print("Current Iteration: ", iteration)
     print("Current Loss: ", currentError)
     print("Current Learing Rate: ", self.learningRate)
-    self._example_Number = 1
-end
-
-local function print_ex(self, example)
-    print(self._example_Number, ": ", self.criterion.output)
-    self._example_Number = self._example_Number + 1
+    torch.save('/homes/iws/kingb12/LanguageModelRNN/model'..sgd_trainer._example_Number..'.th7')
+    sgd_trainer._example_Number  = sgd_trainer._example_Number + 1
 end
 
 sgd_trainer.hookIteration = print_info
-sgd_trainer.hookExample = print_ex
 
 
 
