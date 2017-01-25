@@ -156,7 +156,7 @@ function bucket_training_set(dataset)
     return batches
 end
 
-function clean_dataset(t_set, max_batch_size, max_seq_length)
+function clean_dataset(t_set, max_batch_size, max_seq_length, tensorType)
     local trim_set = {}
     for k, v in pairs(t_set) do
         if type(v) ~= 'function' then

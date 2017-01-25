@@ -68,7 +68,7 @@ else
     local word_freq_file = "/homes/iws/kingb12/data/BillionWords/50k_V_word_freq.th7"
     train_set = bucket_training_set(torch.load(train_file))
 end
-train_set = clean_dataset(train_set, opt.max_batch_size, opt.max_seq_length)
+train_set = clean_dataset(train_set, opt.max_batch_size, opt.max_seq_length, tensorType)
 function train_set:size()
     return #train_set
 end
