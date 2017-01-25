@@ -140,3 +140,4 @@ sgd_trainer.hookIteration = print_info
 
 if opt.run then
     sgd_trainer:train(train_set)
+end
