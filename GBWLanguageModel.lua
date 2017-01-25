@@ -45,6 +45,7 @@ cmd:option('-lr_decay', 0.3)
 cmd:option('-print_example_loss', false)
 cmd:option('-save_model_at_epoch', false)
 cmd:option('-save_prefix', '/homes/iws/kingb12/LanguageModelRNN/newcudamodel')
+cmd:option('-run', false)
 
 
 -- Backend options
@@ -132,7 +133,10 @@ local function print_info(self, iteration, currentError)
     if opt.save_model_at_epoch then
         torch.save(opt.save_prefix..sgd_trainer._epoch_Number..'.th7')
     end
-    sgd_trainer._example_Number  = sgd_trainer._example_Number + 1
+    sgd_trainer._epoch_Number  = sgd_trainer._epoch_Number + 1
 end
 
 sgd_trainer.hookIteration = print_info
+
+if opt.run then
+    sgd_trainer:train(train_set)
