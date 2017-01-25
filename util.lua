@@ -155,3 +155,18 @@ function bucket_training_set(dataset)
     end
     return batches
 end
+
+function clean_dataset(t_set, max_batch_size, max_seq_length)
+    local trim_set = {}
+    for k, v in pairs(t_set) do
+        if type(v) ~= 'function' then
+            if v[1]:size()[1] <= max_batch_size and v[2]:size()[2] <= max_seq_length then
+                trim_set[#trim_set + 1] = {v[1]:type(tensorType), v[2]:type(tensorType)}
+            end
+        end
+    end
+    function trim_set:size()
+        return #trim_set
+    end
+    return trim_set
+end
