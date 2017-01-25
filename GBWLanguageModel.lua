@@ -75,7 +75,7 @@ end
 
 -- parameters and settings. Use cmd.opt soon --
 local embeddingSize = opt.wordvec_size
-local learningRate = opt.learning_reate
+local learningRate = opt.learning_rate
 local learningRateDecay = opt.lr_decay
 local max_epochs = opt.max_epochs
 local dropout = opt.dropout > 0
