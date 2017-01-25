@@ -38,8 +38,8 @@ cmd:option('-dropout', 0)
 
 -- Optimization options
 cmd:option('-max_epochs', 50)
-cmd:option('-learning_rate', 2e-3)
-cmd:option('-lr_decay', 5)
+cmd:option('-learning_rate', 0.1)
+cmd:option('-lr_decay', 0.3)
 
 --Output Options
 cmd:option('-print_example_loss', false)
