@@ -25,7 +25,7 @@ local cmd = torch.CmdLine()
 cmd:option('-max_batch_size', 50)
 cmd:option('-max_seq_length', 50)
 cmd:option('-load_bucketed_training_set', '/homes/iws/kingb12/data/BillionWords/50k_V_bucketed_set.th7')
-cmd:option('-train_file', nil)
+cmd:option('-train_file', '')
 cmd:option('-wmap_file', "/homes/iws/kingb12/data/BillionWords/50k_V_word_map.th7")
 cmd:option('-wfreq_file', "/homes/iws/kingb12/data/BillionWords/50k_V_word_freq.th7")
 
@@ -60,7 +60,7 @@ if opt.gpu then
     require 'cunn'
 end
 -- load the training set
-if opt.train_file == nil and opt.load_bucketed_training_set ~= nil then
+if opt.train_file == '' and opt.load_bucketed_training_set ~= nil then
     train_set = torch.load(opt.load_bucketed_training_set)
 else
     local train_file = "/homes/iws/kingb12/data/BillionWords/50k_V_train_small.th7"
