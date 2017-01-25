@@ -88,7 +88,7 @@ local vocabSize = 50000
 -- The Word Embedding Layer --
 -- word-embeddings can be learned using a LookupTable. Training is faster if they are supplied pre-trained, which can be done by changing
 -- the weights at the index for a given word to its embedding form word2vec, etc. This is a doable next-step
-local emb_layer = nn.LookupTable(#wmap, embeddingSize)
+local emb_layer = nn.LookupTable(vocabSize, embeddingSize)
 
 lm = nn.Sequential()
 -- Input Layer: Embedding LookupTable
