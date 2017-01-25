@@ -142,7 +142,8 @@ function bucket_training_set(dataset)
             local remaining = #samples - (i - 1)
             local batch = torch.IntTensor(math.min(50, remaining), seq_length)
             local labels = torch.IntTensor(math.min(50, remaining), seq_length)
-            for j=1, batch:size()[1] - 1 do
+            print('sampling...')
+            for j=1, batch:size()[1] do
                 if i <= #samples then
                     batch[j] = samples[i][1]
                     labels[j] = samples[i][2]

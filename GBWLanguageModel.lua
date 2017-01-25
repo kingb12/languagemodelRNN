@@ -43,7 +43,8 @@ wfreq = torch.load(word_freq_file) -- relative word frequencies. Used for SoftMa
 -- The data comes in a long sequence of words. Here we'll shape it into batches of batchSize sequences of length seqLength
 -- where each training example is a sequence of seqLength words.
 
-train_set = bucket_training_set(ds)
+print('bucketing')
+train_set = torch.load('/homes/iws/kingb12/data/BillionWords/50k_V_bucketed_set.th7')
 function train_set:size()
     return #train_set
 end
