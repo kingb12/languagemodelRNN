@@ -13,7 +13,8 @@ require 'nn'
 require 'nnx'
 require 'util'
 require 'torch-rnn'
-require 'LinearTransform'
+require 'DynamicView'
+require 'Sampler'
 
 torch.setheaptracking(true)
 
@@ -141,3 +142,10 @@ sgd_trainer.hookIteration = print_info
 if opt.run then
     sgd_trainer:train(train_set)
 end
+
+-- =============================================== SAMPLING ============================================================
+
+sampler = nn.Sequential()
+sampler:add(nn.Exp())
+sample:add(nn.Sampler())
+
