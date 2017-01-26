@@ -131,7 +131,7 @@ local function print_info(self, iteration, currentError)
     print("Current Loss: ", currentError)
     print("Current Learing Rate: ", self.learningRate)
     if opt.save_model_at_epoch then
-        torch.save(opt.save_prefix..sgd_trainer._epoch_Number..'.th7')
+        torch.save(opt.save_prefix..sgd_trainer._epoch_Number..'.th7', self.module)
     end
     sgd_trainer._epoch_Number  = sgd_trainer._epoch_Number + 1
 end
