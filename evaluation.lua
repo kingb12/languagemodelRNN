@@ -160,8 +160,8 @@ function generate_samples(data_set, num_samples)
         local x = opt.gpu and torch.CudaTensor(1, cut_length) or torch.IntTensor(1, cut_length)
         for i=1, cut_length do x[1][i] = example[example_no][i] end
         local result = {}
-        result['generated'] = sequence_to_string(sample(model, x))
-        result['gold'] = label:reshape(example:size())[example_no]
+        result['generated'] = sequence_to_string(sample(model, x, opt.max_sample_length))
+        result['gold'] = sequence_to_string(label:reshape(example:size())[example_no])
         result['supplied_length'] = cut_length
         results[#results + 1] = result
     end
