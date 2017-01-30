@@ -42,6 +42,7 @@ cmd:option('-model', 'newcudamodel.th7')
 cmd:option('-batch_loss_file', '')
 cmd:option('-num_samples', 10)
 cmd:option('-max_sample_length', 10)
+cmd:option('-out', '')
 
 local opt = cmd:parse(arg)
 -- ================================================ EVALUATION =========================================================
@@ -170,8 +171,15 @@ end
 
 -- generate some samples
 if opt.generate_samples then
-
+    output['train_samples'] = generate_samples(train_set, opt.num_samples)
+    output['valid_samples'] = generate_samples(valid_set, opt.num_samples)
+    output['test_samples'] = generate_samples(test_set, opt.num_samples)
 end
 
-
-
+if opt.out ~= '' then
+    local s = cjson.encode(output)
+    local io = require 'io'
+    local f = io:open(opt.out, 'w')
+    f:write(s)
+    f:close()
+end
