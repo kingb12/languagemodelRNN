@@ -24,6 +24,9 @@ torch.setheaptracking(true)
 local cmd = torch.CmdLine()
 -- Options
 cmd:option('-gpu', false)
+cmd:option('-calculate_losses', false)
+cmd:option('-generate_samples', false)
+
 
 -- Dataset options
 cmd:option('-train_set', '/homes/iws/kingb12/data/BillionWords/25k_V_bucketed_set.th7')
@@ -39,7 +42,6 @@ cmd:option('-model', 'newcudamodel.th7')
 cmd:option('-batch_loss_file', '')
 cmd:option('-num_samples', 10)
 cmd:option('-max_sample_length', 10)
-cmd:option('-run', false)
 
 local opt = cmd:parse(arg)
 -- ================================================ EVALUATION =========================================================
@@ -101,22 +103,25 @@ end
 output = {}
 
 -- calculate losses
-print('Calculating Training Loss...')
-local tr_set_loss, tr_batch_loss = loss_on_dataset(train_set, criterion)
-output['train_loss'] = tr_set_loss
-output['train_batch_loss'] = tr_batch_loss
+if opt.calculate_losses then
+    print('Calculating Training Loss...')
+    local tr_set_loss, tr_batch_loss = loss_on_dataset(train_set, criterion)
+    output['train_loss'] = tr_set_loss
+    output['train_batch_loss'] = tr_batch_loss
 
-print('Calculating Validation Loss...')
-local vd_set_loss, vd_batch_loss = loss_on_dataset(valid_set, criterion)
-output['valid_loss'] = vd_set_loss
-output['valid_batch_loss'] = vd_batch_loss
+    print('Calculating Validation Loss...')
+    local vd_set_loss, vd_batch_loss = loss_on_dataset(valid_set, criterion)
+    output['valid_loss'] = vd_set_loss
+    output['valid_batch_loss'] = vd_batch_loss
 
-print('Calculating Test Loss...')
-local ts_set_loss, ts_batch_loss = loss_on_dataset(test_set, criterion)
-output['test_loss'] = ts_set_loss
-output['test_batch_loss'] = ts_batch_loss
+    print('Calculating Test Loss...')
+    local ts_set_loss, ts_batch_loss = loss_on_dataset(test_set, criterion)
+    output['test_loss'] = ts_set_loss
+    output['test_batch_loss'] = ts_batch_loss
+end
 
 sampler = nn.Sampler()
+
 function sample(output, max_samples)
     if max_samples == nil then
         max_samples = 1
@@ -132,4 +137,7 @@ function sample(output, max_samples)
 end
 
 -- generate some samples
+if opt.generate_samples then
+    print('nada')
+end
 
