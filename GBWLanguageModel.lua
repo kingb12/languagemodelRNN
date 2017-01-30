@@ -112,7 +112,12 @@ if opt.init_from == '' then
     -- Hidden Layers: Two LSTM layers, stacked
     -- next steps: dropout, etc.
     for i=1,opt.num_layers do
-        local lstm = nn.LSTM(embeddingSize, hiddenSize)
+        local lstm
+        if i == 1 then
+            lstm = nn.LSTM(embeddingSize, hiddenSize)
+        else
+            lstm = nn.LSTM(hiddenSize, hiddenSize)
+        end
         lstm.remember_states = true
         lm:add(lstm)
         if dropout then lm:add(nn.Dropout(opt.dropout)) end
