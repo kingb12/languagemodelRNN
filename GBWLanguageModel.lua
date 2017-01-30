@@ -26,10 +26,10 @@ local cmd = torch.CmdLine()
 cmd:option('-max_batch_size', 50)
 cmd:option('-max_seq_length', 50)
 cmd:option('-no_dataset', false)
-cmd:option('-load_bucketed_training_set', '/homes/iws/kingb12/data/BillionWords/50k_V_bucketed_set.th7')
+cmd:option('-load_bucketed_training_set', '/homes/iws/kingb12/data/BillionWords/25k_V_bucketed_set.th7')
 cmd:option('-train_file', '')
-cmd:option('-wmap_file', "/homes/iws/kingb12/data/BillionWords/50k_V_word_map.th7")
-cmd:option('-wfreq_file', "/homes/iws/kingb12/data/BillionWords/50k_V_word_freq.th7")
+cmd:option('-wmap_file', "/homes/iws/kingb12/data/BillionWords/25k_V_word_map.th7")
+cmd:option('-wfreq_file', "/homes/iws/kingb12/data/BillionWords/25k_V_word_freq.th7")
 
 -- Model options
 cmd:option('-init_from', '')
