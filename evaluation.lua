@@ -128,8 +128,9 @@ function sample(model, sequence, max_samples)
     end
     local addition = opt.gpu and torch.zeros(sequence:size(1)):cuda() or torch.zeros(sequence:size(1))
     local output = torch.cat(sequence, addition , 2)
-    local sampled = sampler:forward(model:forward(sequence:repeatTensor(50, 1)))
-    for i=1, output:size(1) do output[i][output:size(2) + 1] = sampled[output:size(2)] end
+    local y = model:forward(sequence:repeatTensor(50, 1))
+    local sampled = sampler:forward(y:reshape(50, y:size(1) / 50, y:size(2))[1])
+    for i=1, output:size(1) do output[i][output:size(2)] = sampled[output:size(2)] end
     if max_samples == 1 then
         return output
     else
