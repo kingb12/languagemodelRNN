@@ -24,8 +24,6 @@ function parse_csv(csv_file_name)
     return lines
 end
 
--- TODO: Write a function to parse tables to Tensors, specify label index
-
 -- returns a table of input, label pairs from a CSV file. Label is first element
 function dataset_from_csv(csv_file_name)
     local csv = parse_csv(csv_file_name)
@@ -51,6 +49,7 @@ function set_pretrained_enbeddings(embedding_file_name, lookup_layer)
     end
 end
 
+-- used when using a larger vocab size, requiring a SoftMaxTree layer as opposed to LogSoftMax Not needed here?
 function frequencyTree(word_frequency, binSize)
     binSize = binSize or 100
     local wf = word_frequency
@@ -78,11 +77,9 @@ function frequencyTree(word_frequency, binSize)
     return tree, id
 end
 
---
+-- takes a dataset and reduces vocab size, substituting <UNK> for infrequent words, and adjusting the word_map,
+-- word_freq as necessary
 function reduce_vocab_size(dataset, word_map, word_frequency, new_size)
-    -- read the whole vocab table and reverse it to (freq -> {indexes})
-    -- take the n most frequent indexes, build a new wmap, wfreq where freq(<UNK>) sum(word_freq) - sum(new)
-    -- save it as a new dataset, new word_freq, new wmap
     local ds = dataset:clone()
     local wmap = {}
     local y, idx = torch.topk(word_frequency, new_size, 1, true)
@@ -115,6 +112,7 @@ function reduce_vocab_size(dataset, word_map, word_frequency, new_size)
     return ds, wmap, wf
 end
 
+-- reads a dataset and separates it into batches of size 50 or less, with sequence lengths all being the same in a batch
 function bucket_training_set(dataset)
     local buckets = {}
     local batches = {}
@@ -156,11 +154,13 @@ function bucket_training_set(dataset)
     return batches
 end
 
-function clean_dataset(t_set, max_batch_size, max_seq_length, tensorType)
+-- removes batches that aren't of exact batch size, and less than specified sequence length. Batch sizes must be consistent
+-- when LSTM.remember_states is set to true.
+function clean_dataset(t_set, batch_size, max_seq_length, tensorType)
     local trim_set = {}
     for k, v in pairs(t_set) do
         if type(v) ~= 'function' then
-            if v[1]:size()[1] <= max_batch_size and v[1]:size()[2] <= max_seq_length then
+            if v[1]:size()[1] == batch_size and v[1]:size()[2] <= max_seq_length then
                 trim_set[#trim_set + 1] = {v[1]:type(tensorType), v[2]:type(tensorType)}
             end
         end
