@@ -91,8 +91,9 @@ function loss_on_dataset(data_set, criterion)
             local x = batch_losses[data_set[i][1]:size(2)]
             x[#x + 1] = l
         end
-        loss = loss + (l / n)
+        loss = loss + l
     end
+    loss = loss / #data_set
     return loss, batch_losses
 end
 
