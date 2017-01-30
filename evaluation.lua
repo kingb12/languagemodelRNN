@@ -52,6 +52,8 @@ criterion = nn.ClassNLLCriterion()
 
 -- CUDA everything if GPU
 if opt.gpu then
+    require 'cutorch'
+    require 'cunn'
     train_set = train_set:cuda()
     valid_set = valid_set:cuda()
     test_set = test_set:cuda()
