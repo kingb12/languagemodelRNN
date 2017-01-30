@@ -42,7 +42,7 @@ cmd:option('-num_layers', 3)
 -- Optimization options
 cmd:option('-max_epochs', 50)
 cmd:option('-learning_rate', 0.1)
-cmd:option('-lr_decay', 0.3)
+cmd:option('-lr_decay', 0.0)
 
 --Output Options
 cmd:option('-print_example_loss', false)
@@ -94,7 +94,7 @@ local learningRateDecay = opt.lr_decay
 local max_epochs = opt.max_epochs
 local dropout = opt.dropout > 0
 local hiddenSize = opt.hidden_size
-local vocabSize = 50000
+local vocabSize = 25000
 
 
 -- =========================================== THE MODEL ===============================================================
