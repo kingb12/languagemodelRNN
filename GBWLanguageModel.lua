@@ -24,7 +24,7 @@ local cmd = torch.CmdLine()
 
 -- Dataset options
 cmd:option('-max_batch_size', 50)
-cmd:option('-max_seq_length', 50)
+cmd:option('-max_seq_length', 30)
 cmd:option('-no_dataset', false)
 cmd:option('-load_bucketed_training_set', '/homes/iws/kingb12/data/BillionWords/25k_V_bucketed_set.th7')
 cmd:option('-train_file', '')
@@ -75,6 +75,14 @@ if not opt.no_dataset then
         train_set = bucket_training_set(torch.load(train_file))
     end
     train_set = clean_dataset(train_set, opt.max_batch_size, opt.max_seq_length, tensorType)
+    local t_set = {}
+    -- Must use equal batch sizes in order to remember states
+    for i=1,#train_set do
+        if train_set[i][1]:size(1) == 50 and train_set[i][1]:size(2) <= opt.max_seq_length then
+            t_set[#t_set + 1] = train_set[i]
+        end
+    end
+    train_set = t_set
     function train_set:size()
         return #train_set
     end
@@ -104,7 +112,9 @@ if opt.init_from == '' then
     -- Hidden Layers: Two LSTM layers, stacked
     -- next steps: dropout, etc.
     for i=1,opt.num_layers do
-        lm:add(nn.LSTM(embeddingSize, hiddenSize))
+        local lstm = nn.LSTM(embeddingSize, hiddenSize)
+        lstm.remember_states = true
+        lm:add(lstm)
         if dropout then lm:add(nn.Dropout(opt.dropout)) end
     end
 
