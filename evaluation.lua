@@ -64,6 +64,7 @@ valid_set = clean_dataset(torch.load(opt.valid_set), 50)
 test_set = clean_dataset(torch.load(opt.test_set), 50)
 model = torch.load(opt.model)
 criterion = nn.ClassNLLCriterion()
+wmap = torch.load(opt.wmap_file)
 
 function table_cuda(dataset) 
     for i=1, #dataset do
@@ -130,16 +131,47 @@ function sample(model, sequence, max_samples)
     local output = torch.cat(sequence, addition , 2)
     local y = model:forward(sequence:repeatTensor(50, 1))
     local sampled = sampler:forward(y:reshape(50, y:size(1) / 50, y:size(2))[1])
-    for i=1, output:size(1) do output[i][output:size(2)] = sampled[output:size(2)] end
-    if max_samples == 1 then
+    for i=1, output:size(1) do output[i][output:size(2)] = sampled[output:size(2) - 1] end
+    if max_samples == 1 or wmap[output[i][output:size(2)]] == '</S>' then
         return output
     else
         return sample(output, max_samples - 1)
     end
 end
 
+function sequence_to_string(seq)
+    local str = ''
+    if seq:dim() == 2 then seq = seq[1] end
+    for i=1, seq:size()[1] do
+        local next_word = wmap[seq[i]] == nil and '<UNK>' or wmap[seq[i]]
+        str = str..' '..next_word
+    end
+    return str
+end
+
+function generate_samples(data_set, num_samples)
+    local results = {}
+    for i = 1, num_samples do
+        local t_set_idx = (torch.random() % #data_set) + 1
+        local example = data_set[t_set_idx][1]
+        local label = data_set[t_set_idx][2]
+        local example_no = torch.random() % example:size(1)
+        local cut_length = (torch.random() % example:size(2)) + 1
+        local x = opt.gpu and torch.CudaTensor(1, cut_length) or torch.IntTensor(1, cut_length)
+        for i=1, cut_length do x[1][i] = example[example_no][i] end
+        local result = {}
+        result['generated'] = sequence_to_string(sample(model, x))
+        result['gold'] = label:reshape(example:size())[example_no]
+        result['supplied_length'] = cut_length
+        results[#results + 1] = result
+    end
+    return results
+end
+
 -- generate some samples
 if opt.generate_samples then
-    print('nada')
+
 end
+
+
 
