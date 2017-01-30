@@ -122,14 +122,14 @@ end
 
 sampler = opt.gpu and nn.Sampler():cuda() or nn.Sampler()
 
-function sample(output, max_samples)
+function sample(model, sequence, max_samples)
     if max_samples == nil then
         max_samples = 1
     end
-    local addition = opt.gpu and torch.zeros(output:size(1)):cuda() or torch.zeros(output:size(1))
-    local output = torch.cat(output, addition , 2)
-    local sampled = sampler:forward(output)
-    for i=1, output:size(1) do output[i][output:size(2) + 1] = sampled[i] end
+    local addition = opt.gpu and torch.zeros(sequence:size(1)):cuda() or torch.zeros(sequence:size(1))
+    local output = torch.cat(sequence, addition , 2)
+    local sampled = sampler:forward(model:forward(sequence:repeatTensor(50, 1)))
+    for i=1, output:size(1) do output[i][output:size(2) + 1] = sampled[output:size(2)] end
     if max_samples == 1 then
         return output
     else
