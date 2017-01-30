@@ -25,6 +25,7 @@ local cmd = torch.CmdLine()
 -- Dataset options
 cmd:option('-max_batch_size', 50)
 cmd:option('-max_seq_length', 50)
+cmd:option('-no_dataset', false)
 cmd:option('-load_bucketed_training_set', '/homes/iws/kingb12/data/BillionWords/50k_V_bucketed_set.th7')
 cmd:option('-train_file', '')
 cmd:option('-wmap_file', "/homes/iws/kingb12/data/BillionWords/50k_V_word_map.th7")
@@ -36,6 +37,7 @@ cmd:option('-reset_iterations', 1)
 cmd:option('-wordvec_size', 100)
 cmd:option('-hidden_size', 100)
 cmd:option('-dropout', 0)
+cmd:option('-num_layers', 3)
 
 -- Optimization options
 cmd:option('-max_epochs', 50)
@@ -61,21 +63,23 @@ if opt.gpu then
     require 'cutorch'
     require 'cunn'
 end
--- load the training set
-if opt.train_file == '' and opt.load_bucketed_training_set ~= nil then
-    train_set = torch.load(opt.load_bucketed_training_set)
-else
-    local train_file = "/homes/iws/kingb12/data/BillionWords/50k_V_train_small.th7"
-    local word_map_file = "/homes/iws/kingb12/data/BillionWords/50k_V_word_map.th7"
-    local word_freq_file = "/homes/iws/kingb12/data/BillionWords/50k_V_word_freq.th7"
-    train_set = bucket_training_set(torch.load(train_file))
-end
-train_set = clean_dataset(train_set, opt.max_batch_size, opt.max_seq_length, tensorType)
-function train_set:size()
-    return #train_set
+
+if not opt.no_dataset then
+    -- load the training set
+    if opt.train_file == '' and opt.load_bucketed_training_set ~= nil then
+        train_set = torch.load(opt.load_bucketed_training_set)
+    else
+        local train_file = opt.train_file
+        local word_map_file = opt.wmap_file
+        local word_freq_file = opt.wfreq_file
+        train_set = bucket_training_set(torch.load(train_file))
+    end
+    train_set = clean_dataset(train_set, opt.max_batch_size, opt.max_seq_length, tensorType)
+    function train_set:size()
+        return #train_set
+    end
 end
 
--- parameters and settings. Use cmd.opt soon --
 local embeddingSize = opt.wordvec_size
 local learningRate = opt.learning_rate
 local learningRateDecay = opt.lr_decay
@@ -87,28 +91,33 @@ local vocabSize = 50000
 
 -- =========================================== THE MODEL ===============================================================
 
--- The Word Embedding Layer --
--- word-embeddings can be learned using a LookupTable. Training is faster if they are supplied pre-trained, which can be done by changing
--- the weights at the index for a given word to its embedding form word2vec, etc. This is a doable next-step
-local emb_layer = nn.LookupTable(vocabSize, embeddingSize)
+if opt.init_from ~= '' then
+    -- The Word Embedding Layer --
+    -- word-embeddings can be learned using a LookupTable. Training is faster if they are supplied pre-trained, which can be done by changing
+    -- the weights at the index for a given word to its embedding form word2vec, etc. This is a doable next-step
+    local emb_layer = nn.LookupTable(vocabSize, embeddingSize)
 
-lm = nn.Sequential()
--- Input Layer: Embedding LookupTable
-lm:add(emb_layer) -- takes a sequence of word indexes and returns a sequence of word embeddings
+    lm = nn.Sequential()
+    -- Input Layer: Embedding LookupTable
+    lm:add(emb_layer) -- takes a sequence of word indexes and returns a sequence of word embeddings
 
--- Hidden Layers: Two LSTM layers, stacked
--- next steps: dropout, etc.
-lm:add(nn.LSTM(embeddingSize, hiddenSize))
-if dropout then lm:add(nn.Dropout(opt.dropout)) end
-lm:add(nn.LSTM(hiddenSize, hiddenSize))
-if dropout then lm:add(nn.Dropout(opt.dropout)) end
-lm:add(nn.LSTM(hiddenSize, hiddenSize))
-if dropout then lm:add(nn.Dropout(opt.dropout)) end
-lm:add(nn.DynamicView(hiddenSize)) -- to transform to the appropriate dimmensions
-lm:add(nn.Linear(hiddenSize, vocabSize))
+    -- Hidden Layers: Two LSTM layers, stacked
+    -- next steps: dropout, etc.
+    for i=1,opt.num_layers do
+        lm:add(nn.LSTM(embeddingSize, hiddenSize))
+        if dropout then lm:add(nn.Dropout(opt.dropout)) end
+    end
 
--- Output Layer: LogSoftMax. Outputs are a distribution over each word in the vocabulary x seqLength*batchSize
-lm:add(nn.LogSoftMax())
+    lm:add(nn.DynamicView(hiddenSize)) -- to transform to the appropriate dimmensions
+    lm:add(nn.Linear(hiddenSize, vocabSize))
+
+    -- Output Layer: LogSoftMax. Outputs are a distribution over each word in the vocabulary x seqLength*batchSize
+    lm:add(nn.LogSoftMax())
+else
+    -- load a model from a th7 file
+    lm = torch.load(opt.init_from)
+end
+
 
 -- =============================================== TRAINING ============================================================
 
@@ -147,5 +156,5 @@ end
 
 sampler = nn.Sequential()
 sampler:add(nn.Exp())
-sample:add(nn.Sampler())
+sampler:add(nn.Sampler())
 
