@@ -179,7 +179,7 @@ end
 if opt.out ~= '' then
     local s = cjson.encode(output)
     local io = require 'io'
-    local f = io:open(opt.out, 'w')
+    local f = io:open(opt.out, 'w+')
     f:write(s)
     f:close()
 end
