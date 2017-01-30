@@ -135,7 +135,7 @@ function sample(model, sequence, max_samples)
     if max_samples == 1 or wmap[output[1][output:size(2)]] == '</S>' then
         return output
     else
-        return sample(output, max_samples - 1)
+        return sample(model, output, max_samples - 1)
     end
 end
 
