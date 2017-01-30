@@ -132,7 +132,7 @@ function sample(model, sequence, max_samples)
     local y = model:forward(sequence:repeatTensor(50, 1))
     local sampled = sampler:forward(y:reshape(50, y:size(1) / 50, y:size(2))[1])
     for i=1, output:size(1) do output[i][output:size(2)] = sampled[output:size(2) - 1] end
-    if max_samples == 1 or wmap[output[i][output:size(2)]] == '</S>' then
+    if max_samples == 1 or wmap[output[1][output:size(2)]] == '</S>' then
         return output
     else
         return sample(output, max_samples - 1)
