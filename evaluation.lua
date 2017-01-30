@@ -120,13 +120,14 @@ if opt.calculate_losses then
     output['test_batch_loss'] = ts_batch_loss
 end
 
-sampler = nn.Sampler()
+sampler = opt.gpu and nn.Sampler():cuda() or nn.Sampler()
 
 function sample(output, max_samples)
     if max_samples == nil then
         max_samples = 1
     end
-    local output = torch.cat(output, torch.zeros(output:size(1)))
+    local addition = opt.gpu and torch.zeros(output:size(1)):cuda() or torch.zeros(output:size(1))
+    local output = torch.cat(output, addition , 2)
     local sampled = sampler:forward(output)
     for i=1, output:size(1) do output[i][output:size(2) + 1] = sampled[i] end
     if max_samples == 1 then
