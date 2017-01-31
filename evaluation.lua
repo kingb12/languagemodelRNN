@@ -42,6 +42,7 @@ cmd:option('-model', 'newcudamodel.th7')
 cmd:option('-batch_loss_file', '')
 cmd:option('-num_samples', 10)
 cmd:option('-max_sample_length', 10)
+cmd:option('-max_gen_example_length', 10)
 cmd:option('-out', '')
 
 local opt = cmd:parse(arg)
@@ -150,8 +151,21 @@ function sequence_to_string(seq)
     return str
 end
 
+function truncate_dataset(data_set, max_seq_len)
+    local result = {}
+    for i=1, #data_set do
+        if data_set[i][1]:size(2) <= max_seq_len then
+            result[#result + 1] = data_set[i]
+        end
+    end
+    return result
+end
+
 function generate_samples(data_set, num_samples)
     local results = {}
+    if opt.max_gen_example_length > 0 then
+        data_set = truncate_dataset(data_set, opt.max_gen_example_length)
+    end
     for i = 1, num_samples do
         local t_set_idx = (torch.random() % #data_set) + 1
         local example = data_set[t_set_idx][1]
