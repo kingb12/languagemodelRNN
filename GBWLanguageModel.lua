@@ -162,10 +162,10 @@ local optim_config = {learningRate = learningRate }
 
 local function feval(params)
     gradParams:zero()
-    local outputs = model:forward(train_set[batch][1])
+    local outputs = lm:forward(train_set[batch][1])
     local loss = criterion:forward(outputs, train_set[batch][2])
     local dloss_doutputs = criterion:backward(outputs, train_set[batch][2])
-    model:backward(train_set[batch][1], dloss_doutputs)
+    lm:backward(train_set[batch][1], dloss_doutputs)
     if batch == train_set:size() then
         batch = 1
         epoch = epoch + 1

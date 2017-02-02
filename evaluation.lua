@@ -65,6 +65,7 @@ train_set = clean_dataset(torch.load(opt.train_set), 50)
 valid_set = clean_dataset(torch.load(opt.valid_set), 50)
 test_set = clean_dataset(torch.load(opt.test_set), 50)
 model = torch.load(opt.model)
+model:evaluate()
 criterion = nn.ClassNLLCriterion()
 wmap = torch.load(opt.wmap_file)
 
@@ -131,8 +132,8 @@ function sample(model, sequence, max_samples)
     end
     local addition = opt.gpu and torch.zeros(sequence:size(1)):cuda() or torch.zeros(sequence:size(1))
     local output = torch.cat(sequence, addition , 2)
-    local y = model:forward(sequence:repeatTensor(50, 1))
-    local sampled = sampler:forward(y:reshape(50, y:size(1) / 50, y:size(2))[1])
+    local y = model:forward(sequence)
+    local sampled = sampler:forward(y)[1]
     for i=1, output:size(1) do output[i][output:size(2)] = sampled[output:size(2) - 1] end
     if max_samples == 1 or wmap[output[1][output:size(2)]] == '</S>' then
         return output
