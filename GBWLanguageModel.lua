@@ -201,18 +201,3 @@ sampler:add(nn.Exp())
 sampler:add(nn.Sampler())
 
 -- =============================================== EVALUATION ==========================================================
-
-function perplexity_over_dataset(model, data_set)
-    local data_perplexity = 0
-    local exp = nn.Exp()
-    if opt.gpu then exp = exp:cuda() end
-    for i=1,#data_set do
-        local y = exp:forward(model:forward(data_set[i][1]))
-        local batch_perplexity = 0
-        for j=1,y:size(1) do
-            batch_perplexity = batch_perplexity + perplexity(y[j])
-        end
-        data_perplexity = data_perplexity + (batch_perplexity / y:size(1))
-    end
-    return data_perplexity
-end

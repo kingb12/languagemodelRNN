@@ -25,6 +25,7 @@ local cmd = torch.CmdLine()
 -- Options
 cmd:option('-gpu', false)
 cmd:option('-calculate_losses', false)
+cmd:option('-calculate_perplexity', false)
 cmd:option('-generate_samples', false)
 
 
@@ -190,6 +191,40 @@ if opt.generate_samples then
     output['train_samples'] = generate_samples(train_set, opt.num_samples)
     output['valid_samples'] = generate_samples(valid_set, opt.num_samples)
     output['test_samples'] = generate_samples(test_set, opt.num_samples)
+end
+
+-- calculate perplexity
+function perplexity_over_dataset(model, data_set)
+    local data_perplexity = 0
+    local batch_perps = {}
+    local exp = nn.Exp()
+    if opt.gpu then exp = exp:cuda() end
+    for i=1,#data_set do
+        local y = exp:forward(model:forward(data_set[i][1]))
+        local batch_perplexity = 0
+        for j=1,y:size(1) do
+            batch_perplexity = batch_perplexity + perplexity(y[j])
+            if batch_perps[data_set[i][1]:size(2)] == nil then
+                batch_perps[data_set[i][1]:size(2)] = {batch_perplexity}
+            else
+                local x = batch_perps[data_set[i][1]:size(2)]
+                x[#x + 1] = batch_perplexity
+            end
+        end
+        data_perplexity = data_perplexity + (batch_perplexity / y:size(1))
+    end
+    return data_perplexity, batch_perps
+end
+if opt.calculate_perplexity then
+    local tr_perp, tr_bps = perplexity_over_dataset(model, train_set)
+    output['train_perplexity'] = tr_perp
+    output['train_batch_perplexities'] = tr_bps
+    local vd_perp, vd_bps = perplexity_over_dataset(model, valid_set)
+    output['valid_perplexity'] = vd_perp
+    output['valid_batch_perplexities'] = vd_bps
+    local ts_perp, ts_bps = perplexity_over_dataset(model, test_set)
+    output['test_perplexity'] = ts_perp
+    output['test_batch_perplexities'] = ts_bps
 end
 
 if opt.out ~= '' then

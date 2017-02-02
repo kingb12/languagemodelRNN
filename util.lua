@@ -173,5 +173,5 @@ end
 
 function perplexity(x)
     local function log2(num) return torch.log(num) / torch.log(2) end
-    return 1 / torch.pow(2, -1 *torch.sum(torch.cmul(log2(x), x)))
+    return torch.pow(2, -1 *torch.sum(torch.cmul(log2(x), x)))
 end
