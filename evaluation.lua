@@ -175,6 +175,7 @@ function generate_samples(data_set, num_samples)
         local example_no = torch.random() % example:size(1)
         if example_no > example:size(1) then example_no = 1 end
         local cut_length = (torch.random() % example:size(2)) + 1
+        if cut_length > example:size(2) then cut_length = 1 end
         local x = opt.gpu and torch.CudaTensor(1, cut_length) or torch.IntTensor(1, cut_length)
         for i=1, cut_length do x[1][i] = example[example_no][i] end
         local result = {}
