@@ -170,3 +170,8 @@ function clean_dataset(t_set, batch_size, max_seq_length, tensorType)
     end
     return trim_set
 end
+
+function perplexity(x)
+    local function log2(num) return torch.log(num) / torch.log(2) end
+    return 1 / torch.pow(2, -1 *torch.sum(torch.cmul(log2(x), x)))
+end
