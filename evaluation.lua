@@ -172,6 +172,7 @@ function generate_samples(data_set, num_samples)
     for i = 1, num_samples do
         print('Sample ', i)
         local t_set_idx = (torch.random() % #data_set) + 1
+        if t_set_idx > #data_set then t_set_idx = 1 end
         local example = data_set[t_set_idx][1]
         local label = data_set[t_set_idx][2]
         local example_no = torch.random() % example:size(1)
