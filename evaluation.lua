@@ -133,7 +133,7 @@ function sample(model, sequence, max_samples)
     local addition = opt.gpu and torch.zeros(sequence:size(1)):cuda() or torch.zeros(sequence:size(1))
     local output = torch.cat(sequence, addition , 2)
     local y = model:forward(sequence)
-    local sampled = sampler:forward(y)[1]
+    local sampled = sampler:forward(y)
     for i=1, output:size(1) do output[i][output:size(2)] = sampled[output:size(2) - 1] end
     if max_samples == 1 or wmap[output[1][output:size(2)]] == '</S>' then
         return output
@@ -172,6 +172,7 @@ function generate_samples(data_set, num_samples)
         local example = data_set[t_set_idx][1]
         local label = data_set[t_set_idx][2]
         local example_no = torch.random() % example:size(1)
+        if example_no > example:size(1) then example_no = 1 end
         local cut_length = (torch.random() % example:size(2)) + 1
         local x = opt.gpu and torch.CudaTensor(1, cut_length) or torch.IntTensor(1, cut_length)
         for i=1, cut_length do x[1][i] = example[example_no][i] end
