@@ -168,7 +168,9 @@ function generate_samples(data_set, num_samples)
     if opt.max_gen_example_length > 0 then
         data_set = truncate_dataset(data_set, opt.max_gen_example_length)
     end
+    print('Generating Samples...')
     for i = 1, num_samples do
+        print('Sample ', i)
         local t_set_idx = (torch.random() % #data_set) + 1
         local example = data_set[t_set_idx][1]
         local label = data_set[t_set_idx][2]
@@ -217,12 +219,15 @@ function perplexity_over_dataset(model, data_set)
     return data_perplexity, batch_perps
 end
 if opt.calculate_perplexity then
+    print('Calculating Training Perplexity...')
     local tr_perp, tr_bps = perplexity_over_dataset(model, train_set)
     output['train_perplexity'] = tr_perp
     output['train_batch_perplexities'] = tr_bps
+    print('Calculating Valid Perplexity...')
     local vd_perp, vd_bps = perplexity_over_dataset(model, valid_set)
     output['valid_perplexity'] = vd_perp
     output['valid_batch_perplexities'] = vd_bps
+    print('Calculating Test Perplexity...')
     local ts_perp, ts_bps = perplexity_over_dataset(model, test_set)
     output['test_perplexity'] = ts_perp
     output['test_batch_perplexities'] = ts_bps
