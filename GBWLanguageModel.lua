@@ -15,6 +15,7 @@ require 'util'
 require 'torch-rnn'
 require 'DynamicView'
 require 'Sampler'
+require 'optim'
 
 torch.setheaptracking(true)
 
@@ -43,6 +44,7 @@ cmd:option('-num_layers', 3)
 cmd:option('-max_epochs', 50)
 cmd:option('-learning_rate', 0.1)
 cmd:option('-lr_decay', 0.0)
+cmd:option('-algorithm', 'sgd')
 
 --Output Options
 cmd:option('-print_example_loss', false)
@@ -139,32 +141,57 @@ end
 -- Training --
 -- We'll use NLLCriterion to maximize the likelihood for correct words, and StochasticGradientDescent to run it.
 criterion = nn.ClassNLLCriterion()
-
---  We train using Stochastic Gradient Descent. We set a learning rate and number of epochs of training
 if opt.gpu then
-    sgd_trainer = nn.StochasticGradient(lm:cuda(), criterion:cuda())
-else
-    sgd_trainer = nn.StochasticGradient(lm, crtierion)
+    criterion = criterion:cuda()
+    lm = lm:cuda()
 end
-sgd_trainer.learningRate = learningRate
-sgd_trainer.learningRateDecay = learningRateDecay
-sgd_trainer.maxIteration = max_epochs
-sgd_trainer._epoch_Number = 1
+local params, gradParams = lm:getParameters()
+local batch = 1
+local epoch = 0
 
-local function print_info(self, iteration, currentError)
+local function print_info(learningRate, iteration, currentError)
     print("Current Iteration: ", iteration)
     print("Current Loss: ", currentError)
-    print("Current Learing Rate: ", self.learningRate)
+    print("Current Learing Rate: ", learningRate)
     if opt.save_model_at_epoch then
-        torch.save(opt.save_prefix..'.th7', self.module)
+        torch.save(opt.save_prefix..'.th7', lm)
     end
-    sgd_trainer._epoch_Number  = sgd_trainer._epoch_Number + 1
 end
 
-sgd_trainer.hookIteration = print_info
+local optim_config = {learningRate = learningRate }
+
+local function feval(params)
+    gradParams:zero()
+    local outputs = model:forward(train_set[batch][1])
+    local loss = criterion:forward(outputs, train_set[batch][2])
+    local dloss_doutputs = criterion:backward(outputs, train_set[batch][2])
+    model:backward(train_set[batch][1], dloss_doutputs)
+    if batch == train_set:size() then
+        batch = 1
+        epoch = epoch + 1
+        print_info(optim_config.learningRate, epoch, loss)
+    else
+        batch = batch + 1
+    end
+    return loss, gradParams
+end
+
+-- sgd_trainer.learningRateDecay = learningRateDecay
+
+function train_model()
+    if opt.algorithm == 'adam' then
+        while (epoch < max_epochs) do
+            local _, loss = optim.adam(feval, params, optim_config)
+        end
+    else
+        while (epoch < max_epochs) do
+            local _, loss = optim.sgd(feval, params, optim_config)
+        end
+    end
+end
 
 if opt.run then
-    sgd_trainer:train(train_set)
+    train_model()
 end
 
 -- =============================================== SAMPLING ============================================================
