@@ -201,24 +201,20 @@ end
 function perplexity_over_dataset(model, data_set)
     local data_perplexity = 0
     local batch_perps = {}
-    local exp = nn.Exp()
-    if opt.gpu then exp = exp:cuda() end
     for i=1,#data_set do
-        local y = exp:forward(model:forward(data_set[i][1]))
-        local batch_perplexity = 0
-        for j=1,y:size(1) do
-            batch_perplexity = batch_perplexity + perplexity(y[j])
+        local y = model:forward(data_set[i][1])
+        local batch_perplexity = torch.exp(criterion:forward(y, data_set[i][2]))
             if batch_perps[data_set[i][1]:size(2)] == nil then
                 batch_perps[data_set[i][1]:size(2)] = {batch_perplexity}
             else
                 local x = batch_perps[data_set[i][1]:size(2)]
                 x[#x + 1] = batch_perplexity
             end
-        end
-        data_perplexity = data_perplexity + (batch_perplexity / y:size(1))
+        data_perplexity = data_perplexity + (batch_perplexity / #data_set)
     end
     return data_perplexity, batch_perps
 end
+
 if opt.calculate_perplexity then
     print('Calculating Training Perplexity...')
     local tr_perp, tr_bps = perplexity_over_dataset(model, train_set)
