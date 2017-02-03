@@ -53,18 +53,18 @@ if opt.gpu then
     require 'cunn'
 end
 
-function clean_dataset(dataset, batch_size, max_seq_length)
+function xclean_dataset(dataset, batch_size, max_seq_length)
     local new_set = {}
     for i=1, #dataset do
-        if dataset[i][1]:size(1) == batch_size and dataset[i][1]:size(2) >= max_seq_length then
+        if dataset[i][1]:size(1) == batch_size and dataset[i][1]:size(2) <= max_seq_length then
             new_set[#new_set + 1] = dataset[i]
         end
     end
     return new_set
 end
-train_set = clean_dataset(torch.load(opt.train_set), 50, 30)
-valid_set = clean_dataset(torch.load(opt.valid_set), 50, 30)
-test_set = clean_dataset(torch.load(opt.test_set), 50, 30)
+train_set = xclean_dataset(torch.load(opt.train_set), 50, 30)
+valid_set = xclean_dataset(torch.load(opt.valid_set), 50, 30)
+test_set = xclean_dataset(torch.load(opt.test_set), 50, 30)
 model = torch.load(opt.model)
 model:evaluate()
 criterion = nn.ClassNLLCriterion()
