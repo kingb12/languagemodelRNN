@@ -169,7 +169,6 @@ local function feval(params)
     if batch == train_set:size() then
         batch = 1
         epoch = epoch + 1
-        print_info(optim_config.learningRate, epoch, loss)
     else
         batch = batch + 1
     end
@@ -182,7 +181,10 @@ function train_model()
     if opt.algorithm == 'adam' then
         while (epoch < max_epochs) do
             local _, loss = optim.adam(feval, params, optim_config)
-            if (batch % 100) == 0 then print('Loss: ', loss) end
+            if (batch % 100) == 0 then print('Loss: ', loss[1]) end
+            if (batch == 1) then
+                print_info(optim_config.learningRate, epoch, loss[1])
+            end
         end
     else
         while (epoch < max_epochs) do
