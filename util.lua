@@ -182,7 +182,7 @@ function count_occurences(raw_data_set, value)
     while i <= raw_data_set:size(1) do
         local count = 0
         local sent_id = raw_data_set[i][1]
-        while raw_data_set[i][1] == sent_id and i <= raw_data_set:size(1) do
+        while i <= raw_data_set:size(1) and raw_data_set[i][1] == sent_id do
             if raw_data_set[i][2] == value then count = count + 1 end
             i = i + 1
         end
