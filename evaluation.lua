@@ -190,20 +190,14 @@ function generate_samples(data_set, num_samples)
     return results
 end
 
--- generate some samples
-if opt.generate_samples then
-    output['train_samples'] = generate_samples(train_set, opt.num_samples)
-    output['valid_samples'] = generate_samples(valid_set, opt.num_samples)
-    output['test_samples'] = generate_samples(test_set, opt.num_samples)
-end
-
 -- calculate perplexity
 function perplexity_over_dataset(model, data_set)
     local data_perplexity = 0
     local batch_perps = {}
     for i=1,#data_set do
         local y = model:forward(data_set[i][1])
-        local batch_perplexity = torch.exp(criterion:forward(y, data_set[i][2]))
+        local loss = criterion:forward(y, data_set[i][2])
+        local batch_perplexity = torch.exp(loss)
             if batch_perps[data_set[i][1]:size(2)] == nil then
                 batch_perps[data_set[i][1]:size(2)] = {batch_perplexity}
             else
@@ -228,6 +222,13 @@ if opt.calculate_perplexity then
     local ts_perp, ts_bps = perplexity_over_dataset(model, test_set)
     output['test_perplexity'] = ts_perp
     output['test_batch_perplexities'] = ts_bps
+end
+
+-- generate some samples
+if opt.generate_samples then
+    output['train_samples'] = generate_samples(train_set, opt.num_samples)
+    output['valid_samples'] = generate_samples(valid_set, opt.num_samples)
+    output['test_samples'] = generate_samples(test_set, opt.num_samples)
 end
 
 if opt.out ~= '' then
