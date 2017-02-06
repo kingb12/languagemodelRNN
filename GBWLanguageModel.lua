@@ -181,11 +181,12 @@ end
 function train_model()
     if opt.algorithm == 'adam' then
         while (epoch < max_epochs) do
-            local _, loss = optim.adam(feval, params, optim_config)
+            local loss, _ = optim.adam(feval, params, optim_config)
+            if (batch % 100) == 0 then print('Loss: ', loss) end
         end
     else
         while (epoch < max_epochs) do
-            local _, loss = optim.sgd(feval, params, optim_config)
+            local loss, _ = optim.sgd(feval, params, optim_config)
         end
     end
 end
