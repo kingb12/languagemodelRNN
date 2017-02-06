@@ -113,9 +113,13 @@ function reduce_vocab_size(dataset, word_map, word_frequency, new_size)
 end
 
 -- reads a dataset and separates it into batches of size 50 or less, with sequence lengths all being the same in a batch
-function bucket_training_set(dataset)
+function bucket_training_set(dataset, max_unk_count, unk_value)
     local buckets = {}
     local batches = {}
+    local occurences
+    if max_unk_count ~= nil and unk_value ~= nil then
+        occurences = count_occurences(dataset, unk_value)
+    end
     local i = 1
     while i <= dataset:size()[1] do
         local sentence_id = dataset[i][1]
@@ -124,14 +128,16 @@ function bucket_training_set(dataset)
             i = i + 1
         end
         local length = i - start - 1
-        local sentence = torch.IntTensor(length)
-        local label = torch.IntTensor(length)
-        for j=1,length do sentence[j] = dataset[start + j - 1][2] end
-        for j=1,length do label[j] = dataset[start + j][2] end
-        if buckets[length] == nil then
-            buckets[length] = {{sentence,label}}
-        else
-            buckets[length][#(buckets[length]) + 1] = {sentence, label}
+        if occurences == nil or occurences[sentence_id] <= max_unk_count then
+            local sentence = torch.IntTensor(length)
+            local label = torch.IntTensor(length)
+            for j=1,length do sentence[j] = dataset[start + j - 1][2] end
+            for j=1,length do label[j] = dataset[start + j][2] end
+            if buckets[length] == nil then
+                buckets[length] = {{sentence,label}}
+            else
+                buckets[length][#(buckets[length]) + 1] = {sentence, label}
+            end
         end
     end
     for seq_length, samples in pairs(buckets) do
@@ -140,7 +146,6 @@ function bucket_training_set(dataset)
             local remaining = #samples - (i - 1)
             local batch = torch.IntTensor(math.min(50, remaining), seq_length)
             local labels = torch.IntTensor(math.min(50, remaining), seq_length)
-            print('sampling...')
             for j=1, batch:size()[1] do
                 if i <= #samples then
                     batch[j] = samples[i][1]
@@ -171,7 +176,18 @@ function clean_dataset(t_set, batch_size, max_seq_length, tensorType)
     return trim_set
 end
 
-function perplexity(x)
-    local function log2(num) return torch.log(num) / torch.log(2) end
-    return torch.pow(2, -1 *torch.sum(torch.cmul(log2(x), x)))
+function count_occurences(raw_data_set, value)
+    local result = torch.IntTensor(raw_data_set:size(1))
+    local i = 1
+    while i <= raw_data_set:size(1) do
+        local count = 0
+        local sent_id = raw_data_set[i][1]
+        while raw_data_set[i][1] == sent_id and i <= raw_data_set:size(1) do
+            if raw_data_set[i][2] == value then count = count + 1 end
+            i = i + 1
+        end
+        result[sent_id] = count
+    end
+    return result
 end
+
