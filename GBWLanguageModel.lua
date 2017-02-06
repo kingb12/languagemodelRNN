@@ -37,6 +37,7 @@ cmd:option('-init_from', '')
 cmd:option('-reset_iterations', 1)
 cmd:option('-wordvec_size', 100)
 cmd:option('-hidden_size', 100)
+cmd:option('-vocab_size', 25000)
 cmd:option('-dropout', 0)
 cmd:option('-num_layers', 3)
 
@@ -96,7 +97,7 @@ local learningRateDecay = opt.lr_decay
 local max_epochs = opt.max_epochs
 local dropout = opt.dropout > 0
 local hiddenSize = opt.hidden_size
-local vocabSize = 25000
+local vocabSize = opt.vocab_size
 
 
 -- =========================================== THE MODEL ===============================================================
