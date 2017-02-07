@@ -40,6 +40,8 @@ cmd:option('-hidden_size', 100)
 cmd:option('-vocab_size', 25000)
 cmd:option('-dropout', 0)
 cmd:option('-num_layers', 3)
+cmd:option('-weights', '')
+cmd:option('-no_average_loss', false)
 
 -- Optimization options
 cmd:option('-max_epochs', 50)
@@ -141,7 +143,16 @@ end
 
 -- Training --
 -- We'll use NLLCriterion to maximize the likelihood for correct words, and StochasticGradientDescent to run it.
-criterion = nn.ClassNLLCriterion()
+if opt.weights == 'inverse_freq' then
+    local wfreq = torch.load(opt.wfreq_file)
+    local inverse_wfreq = torch.pow(wfreq:double(), -1)
+    criterion = nn.ClassNLLCriterion(inverse_wfreq)
+else
+    criterion = nn.ClassNLLCriterion()
+end
+if opt.no_avg_loss then
+    criterion.sizeAverage = false
+end
 if opt.gpu then
     criterion = criterion:cuda()
     lm = lm:cuda()
