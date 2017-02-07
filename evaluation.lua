@@ -66,6 +66,8 @@ train_set = xclean_dataset(torch.load(opt.train_set), 50, 30)
 valid_set = xclean_dataset(torch.load(opt.valid_set), 50, 30)
 test_set = xclean_dataset(torch.load(opt.test_set), 50, 30)
 model = torch.load(opt.model)
+model:get(2).remember_states = false
+model:get(4).remember_states = false
 model:evaluate()
 criterion = nn.ClassNLLCriterion()
 wmap = torch.load(opt.wmap_file)
@@ -175,7 +177,7 @@ function generate_samples(data_set, num_samples)
         if t_set_idx > #data_set then t_set_idx = 1 end
         local example = data_set[t_set_idx][1]
         local label = data_set[t_set_idx][2]
-        local example_no = torch.random() % example:size(1)
+        local example_no = torch.random() % example:size(1) + 1
         if example_no > example:size(1) then example_no = 1 end
         local cut_length = (torch.random() % example:size(2)) + 1
         if cut_length > example:size(2) then cut_length = 1 end
