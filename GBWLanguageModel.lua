@@ -147,6 +147,10 @@ if opt.weights == 'inverse_freq' then
     local wfreq = torch.load(opt.wfreq_file)
     local inverse_wfreq = torch.pow(wfreq:double(), -1)
     criterion = nn.ClassNLLCriterion(inverse_wfreq)
+elseif opt.weights == 'inverse_logfreq' then
+    local wfreq = torch.load(opt.wfreq_file)
+    local inverse_logwfreq = torch.pow(torch.log(wfreq:double()), -1)
+    criterion = nn.ClassNLLCriterion(inverse_logwfreq)
 else
     criterion = nn.ClassNLLCriterion()
 end
