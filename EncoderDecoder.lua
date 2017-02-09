@@ -248,6 +248,10 @@ end
 function train_model()
     if opt.algorithm == 'adam' then
         while (epoch < opt.max_epochs) do
+            local examples = (batch-1)*opt.batch_size
+            local output = outputs[batch]
+            local out_length = out_lengths[{{examples+1, examples+opt.batch_size}}]
+            local in_length = in_lengths[{{examples+1, examples+opt.batch_size}}]
             local _, loss = run_one_batch(opt.algorithm)
             if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss[1]) end
 
@@ -258,10 +262,18 @@ function train_model()
 
             -- print accuracy (handled here so we don't have to pass dec_fwd/embs out of feval)
             if batch % opt.print_acc_every == 0 then
-                local _, embs = torch.max(dec_fwd, 3)
-                embs = torch.reshape(embs, opt.batch_size, opt.max_out_len)
-                print('Accuracy: ', accuracy(embs))
-             end
+                local acc, nwords = 0, 0
+                for n = 1, opt.batch_size do
+                    nwords = nwords + out_length[n]
+                    for t = 1, out_length[n] do
+                        if embs[n][t] == output[n][t] then
+                            acc = acc + 1
+                        end
+                    end
+                end
+                acc = acc / nwords
+                print('Accuracy: ', acc)
+            end
 
             -- print examples
             if batch % opt.print_examples_every == 0 then
@@ -308,18 +320,6 @@ function run_one_batch(algorithm)
     end
 end
 
-function accuracy(embs)
-    local acc, nwords = 0, 0
-    for n = 1, opt.batch_size do
-        nwords = nwords + out_length[n]
-        for t = 1, out_length[n] do
-            if embs[n][t] == output[n][t] then
-                acc = acc + 1
-            end
-        end
-    end
-    acc = acc / nwords
-end
 
 if opt.run then
     train_model()
