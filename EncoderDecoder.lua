@@ -38,10 +38,11 @@ cmd:option('-batch_size', 4)
 -- Model options
 cmd:option('-init_enc_from', '')
 cmd:option('-wordvec_size', 100)
-cmd:option('-hidden_size', 100)
+cmd:option('-hidden_size', 512)
 cmd:option('-vocab_size', 25000)
 cmd:option('-dropout', 0)
-cmd:option('-num_layers', 3)
+cmd:option('-num_enc_layers', 1)
+cmd:option('-num_dec_layers', 1)
 cmd:option('-weights', '')
 cmd:option('-no_average_loss', false)
 
@@ -57,6 +58,8 @@ cmd:option('-save_model_at_epoch', false)
 cmd:option('-save_prefix', '/homes/iws/kingb12/LanguageModelRNN/')
 cmd:option('-run', false)
 cmd:option('-print_acc_every', 0)
+cmd:option('-print_examples_every', 0, 'how often to print out samples')
+
 
 -- Backend options
 cmd:option('-gpu', false)
@@ -88,7 +91,7 @@ if opt.init_enc_from == '' then
     -- The Word Embedding Layer --
     -- word-embeddings can be learned using a LookupTable. Training is faster if they are supplied pre-trained, which can be done by changing
     -- the weights at the index for a given word to its embedding form word2vec, etc. This is a doable next-step
-    emb_layer = nn.LookupTable(vocabSize, opt.embedding_size)
+    emb_layer = nn.LookupTable(opt.vocab_size, opt.wordvec_size)
 
     enc = nn.Sequential()
     -- Input Layer: Embedding LookupTable
@@ -148,7 +151,7 @@ if opt.init_dec_from == '' then
     end
     -- now linear transition layers
     local dec_v1 = nn.View(-1, opt.hidden_size)(previous)
-    local dec_lin = nn.Linear(opt.hidden_size, vocab_size)(dec_v1)
+    local dec_lin = nn.Linear(opt.hidden_size, opt.vocab_size)(dec_v1)
 
     -- now combine them into a graph module
     dec = nn.gModule({dec_c0, dec_h0, dec_emb_layer}, {dec_lin}) -- {inputs}, {outputs}
@@ -222,7 +225,7 @@ local function feval(params)
         batch = batch + 1
     end
 
-    -- print accuracy
+    -- print accuracy (handled here so we don't have to pass dec_fwd/embs out of feval)
     if batch % opt.print_acc_every == 0 then
         local _, embs = torch.max(dec_fwd, 3)
         embs = torch.reshape(embs, batch_size, max_out_len)
@@ -235,23 +238,58 @@ end
 function train_model()
     if opt.algorithm == 'adam' then
         while (epoch < max_epochs) do
-            local _, loss = optim.adam(feval, params, optim_config)
+            local _, loss = run_one_batch(opt.algorithm)
             if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss[1]) end
+
+            -- print info
             if (batch == 1) then
                 print_info(optim_config.learningRate, epoch, loss[1])
             end
-        end
-    else
-        while (epoch < max_epochs) do
-            local _, loss = optim.sgd(feval, params, optim_config)
-            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss[1]) end
-            if (batch == 1) then
-                print_info(optim_config.learningRate, epoch, loss[1])
+
+            -- print examples
+            if batch % example_interval == 0 then
+                print((examples / train_size) * 100 .. '%: loss: ' .. closs / example_interval)
+                closs = 0
+                if verbose == 1 then
+                    for i = 1, batch_size do
+                        io.write('Encoder Input: ')
+                        for j = 1, max_in_len do
+                            io.write(helper.n_to_w[enc_input[i][j]] .. ' ')
+                        end
+                        print('')
+                        io.write('Decoder Input: ')
+                        for j =1, max_out_len do
+                            io.write(helper.n_to_w[dec_input[i][j]] .. ' ')
+                        end
+                        print('')
+                        io.write('Decoder Output: ')
+                        for j = 1, max_out_len do
+                            io.write(helper.n_to_w[embs[i][j]] .. ' ')
+                        end
+                        print('')
+                        io.write('Ground Truth: ')
+                        for j = 1, max_out_len do
+                            io.write(helper.n_to_w[output[i][j]] .. ' ')
+                        end
+                        print('')
+                        print('***********')
+                    end
+                    print('------------------')
+                end
             end
+
+
         end
     end
 end
 
+function run_one_batch(algorithm)
+    if algorithm == 'adam' then
+        return optim.adam(feval, params, optim_config)
+    else
+        return optim.sgd(feval, params, optim_config)
+    end
+end
 function accuracy(embs)
     local acc, nwords = 0, 0
     for n = 1, batch_size do
