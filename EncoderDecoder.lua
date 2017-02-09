@@ -11,11 +11,13 @@ package.path = ';/homes/iws/kingb12/LanguageModelRNN/?.lua;'..package.path
 require 'torch'
 require 'nn'
 require 'nnx'
+require 'nngraph'
 require 'util'
-require 'torch-rnn'
+-- require 'torch-rnn'
 require 'DynamicView'
 require 'Sampler'
 require 'optim'
+require 'LSTM'
 require 'TemporalCrossEntropyCriterion'
 
 -- =========================================== COMMAND LINE OPTIONS ====================================================
@@ -28,6 +30,7 @@ cmd:option('-dec_inputs', '../data/rl_dec_inputs.th7')
 cmd:option('-outputs', '../data/rl_outputs.th7')
 cmd:option('-in_lengths', '../data/rl_in_lengths.th7')
 cmd:option('-out_lengths', '../data/rl_out_lengths.th7')
+cmd:option('-word_map', '../data/rl_wmap.th7')
 
 cmd:option('-max_in_len', 200, 'max encoder sequence length')
 cmd:option('-max_out_len', 300, 'max decoder sequence length')
@@ -37,6 +40,7 @@ cmd:option('-batch_size', 4)
 
 -- Model options
 cmd:option('-init_enc_from', '')
+cmd:option('-init_dec_from', '')
 cmd:option('-wordvec_size', 100)
 cmd:option('-hidden_size', 512)
 cmd:option('-vocab_size', 25000)
@@ -56,6 +60,7 @@ cmd:option('-algorithm', 'adam')
 cmd:option('-print_loss_every', 1000)
 cmd:option('-save_model_at_epoch', false)
 cmd:option('-save_prefix', '/homes/iws/kingb12/LanguageModelRNN/')
+cmd:option('-backup_save_dir', '')
 cmd:option('-run', false)
 cmd:option('-print_acc_every', 0)
 cmd:option('-print_examples_every', 0, 'how often to print out samples')
@@ -66,6 +71,7 @@ cmd:option('-gpu', false)
 
 local opt = cmd:parse(arg)
 local tensorType = 'torch.FloatTensor'
+local learningRate = opt.learning_rate
 
 -- Choosing between GPU/CPU Mode
 if opt.gpu then
@@ -82,20 +88,21 @@ dec_inputs = torch.load(opt.dec_inputs) -- recipe
 outputs = torch.load(opt.outputs) -- recipe shifted one over (like a LM)
 in_lengths = torch.load(opt.in_lengths) -- lengths specifying end of padding
 out_lengths = torch.load(opt.out_lengths) -- lengths specifying end of padding
+wmap = torch.load(opt.word_map) -- translation from # to string
 
 -- =========================================== THE MODEL ===============================================================
 
 -- ***** ENCODER *****
 
+local lu = nn.LookupTable(opt.vocab_size, opt.wordvec_size)
+local enc_lu, dec_lu = lu, lu:clone('weight', 'gradWeight')
 if opt.init_enc_from == '' then
     -- The Word Embedding Layer --
     -- word-embeddings can be learned using a LookupTable. Training is faster if they are supplied pre-trained, which can be done by changing
     -- the weights at the index for a given word to its embedding form word2vec, etc. This is a doable next-step
-    emb_layer = nn.LookupTable(opt.vocab_size, opt.wordvec_size)
-
     enc = nn.Sequential()
     -- Input Layer: Embedding LookupTable
-    enc:add(emb_layer) -- takes a sequence of word indexes and returns a sequence of word embeddings
+    enc:add(enc_lu) -- takes a sequence of word indexes and returns a sequence of word embeddings
     enc_rnns = {}
 
     -- Hidden Layers: Two LSTM layers, stacked
@@ -103,7 +110,7 @@ if opt.init_enc_from == '' then
     for i=1,opt.num_enc_layers do
         local lstm
         if i == 1 then
-            lstm = nn.LSTM(opt.embedding_size, opt.hidden_size)
+            lstm = nn.LSTM(opt.wordvec_size, opt.hidden_size)
         else
             lstm = nn.LSTM(opt.hidden_size, opt.hidden_size)
         end
@@ -125,25 +132,26 @@ if opt.init_dec_from == '' then
     -- Input Layer: Embedding LookupTable. Same as one for encoder so we don't learn two embeddings per word.
     -- we'll be building the decoder with nngraph so we can reuse the lookup layer and pass along hidden state from encoder in training,
     -- since h0 and c0 are graph inputs, we need to make a node for them, done with Identity() layer. nngraph overrides nn.Module()({graph parents})
-    local dec_emb_layer = emb_layer:clone('weight', 'gradWeight')()
     local dec_c0 = nn.Identity()()
     local dec_h0 = nn.Identity()()
+    local dec_lu = dec_lu()
     dec_rnns = {}
 
     -- Hidden Layers: N LSTM layers, stacked, with optional dropout. previous helps us form a linear graph with these
     local previous
     for i=1,opt.num_dec_layers do
-        local lstm
+        local lstm, lstm_n
         if i == 1 then
-            lstm = nn.LSTM(opt.embedding_size, opt.hidden_size)({dec_c0, dec_h0, dec_emb_layer})
-            previous = lstm
+            lstm = nn.LSTM(opt.wordvec_size, opt.hidden_size)
+            lstm_n = lstm({dec_c0, dec_h0, dec_lu})
+            previous = lstm_n
         else
-            lstm = nn.LSTM(opt.hidden_size, opt.hidden_size)(previous)
-            previous = lstm
+            lstm = nn.LSTM(opt.hidden_size, opt.hidden_size)
+            lstm_n = lstm(previous)
+            previous = lstm_n
         end
         lstm.remember_states = true
         dec_rnns[#dec_rnns + 1] = lstm
-        enc:add(lstm)
         if opt.dropout > 0.0 then 
             local drop = nn.Dropout(opt.dropout)(previous)
             previous = drop
@@ -154,7 +162,7 @@ if opt.init_dec_from == '' then
     local dec_lin = nn.Linear(opt.hidden_size, opt.vocab_size)(dec_v1)
 
     -- now combine them into a graph module
-    dec = nn.gModule({dec_c0, dec_h0, dec_emb_layer}, {dec_lin}) -- {inputs}, {outputs}
+    dec = nn.gModule({dec_c0, dec_h0, dec_lu}, {dec_lin}) -- {inputs}, {outputs}
 
 else
     -- load a model from a th7 file
@@ -167,6 +175,9 @@ end
 -- We'll use TemporalCrossEntropyCriterion to maximize the likelihood for correct words, ignoring 0 which indicates padding.
 
 criterion = nn.TemporalCrossEntropyCriterion()
+local cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.hidden_size)
+local hzeros = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.max_in_len-1, opt.hidden_size)
+
 
 if opt.gpu then
     criterion = criterion:cuda()
@@ -177,13 +188,19 @@ end
 local params, gradParams = combine_all_parameters(enc, dec)
 local batch = 1
 local epoch = 0
+local embs
 
 local function print_info(learningRate, iteration, currentError)
     print("Current Iteration: ", iteration)
     print("Current Loss: ", currentError)
     print("Current Learing Rate: ", learningRate)
     if opt.save_model_at_epoch then
-        torch.save(opt.save_prefix..'.th7', lm)
+        pcall(torch.save, opt.save_prefix..'_enc.th7', enc)
+        pcall(torch.save, opt.save_prefix..'_dec.th7', enc)
+        if (opt.backup_save_dir ~= '') then 
+            pcall(torch.save, opt.backup_save_dir..opt.save_prefix..'_enc.th7', enc)
+            pcall(torch.save, opt.backup_save_dir..opt.save_prefix..'_dec.th7', enc)
+        end    
     end
 end
 
@@ -202,18 +219,18 @@ local function feval(params)
     for _,v in pairs(enc_rnns) do v:resetStates() end
     for _,v in pairs(dec_rnns) do v:resetStates() end
     local enc_fwd = enc:forward(enc_input)
-    local dec_h0 = enc_fwd[{{}, max_in_len, {}}]
+    local dec_h0 = enc_fwd[{{}, opt.max_in_len, {}}]
     local dec_fwd = dec:forward({cb:clone(), dec_h0, dec_input})
-    dec_fwd = torch.reshape(dec_fwd, batch_size, max_out_len, vocab_size)
+    dec_fwd = torch.reshape(dec_fwd, opt.batch_size, opt.max_out_len, opt.vocab_size)
     local loss = criterion:forward(dec_fwd, output)
-    local _, embs = torch.max(dec_fwd, 3)
-    embs = torch.reshape(embs, batch_size, max_out_len)
+    _, embs = torch.max(dec_fwd, 3)
+    embs = torch.reshape(embs, opt.batch_size, opt.max_out_len)
 
     -- backward pass
     local cgrd = criterion:backward(dec_fwd, output)
-    cgrd = torch.reshape(cgrd, batch_size*max_out_len, vocab_size)
+    cgrd = torch.reshape(cgrd, opt.batch_size*opt.max_out_len, opt.vocab_size)
     local hlgrad, dgrd = table.unpack(dec:backward({dec_h0, dec_input}, cgrd))
-    local hlgrad = torch.reshape(hlgrad, batch_size, 1, hidden_size)
+    local hlgrad = torch.reshape(hlgrad, opt.batch_size, 1, opt.hidden_size)
     local hgrad = torch.cat(hzeros, hlgrad, 2)
     local egrd = enc:backward(enc_input, hgrad)
 
@@ -225,19 +242,12 @@ local function feval(params)
         batch = batch + 1
     end
 
-    -- print accuracy (handled here so we don't have to pass dec_fwd/embs out of feval)
-    if batch % opt.print_acc_every == 0 then
-        local _, embs = torch.max(dec_fwd, 3)
-        embs = torch.reshape(embs, batch_size, max_out_len)
-        print('Accuracy: ', accuracy(embs))
-    end
-
     return loss, gradParams
 end
 
 function train_model()
     if opt.algorithm == 'adam' then
-        while (epoch < max_epochs) do
+        while (epoch < opt.max_epochs) do
             local _, loss = run_one_batch(opt.algorithm)
             if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss[1]) end
 
@@ -246,36 +256,43 @@ function train_model()
                 print_info(optim_config.learningRate, epoch, loss[1])
             end
 
+            -- print accuracy (handled here so we don't have to pass dec_fwd/embs out of feval)
+            if batch % opt.print_acc_every == 0 then
+                local _, embs = torch.max(dec_fwd, 3)
+                embs = torch.reshape(embs, opt.batch_size, opt.max_out_len)
+                print('Accuracy: ', accuracy(embs))
+             end
+
             -- print examples
-            if batch % example_interval == 0 then
-                print((examples / train_size) * 100 .. '%: loss: ' .. closs / example_interval)
-                closs = 0
-                if verbose == 1 then
-                    for i = 1, batch_size do
-                        io.write('Encoder Input: ')
-                        for j = 1, max_in_len do
-                            io.write(helper.n_to_w[enc_input[i][j]] .. ' ')
-                        end
-                        print('')
-                        io.write('Decoder Input: ')
-                        for j =1, max_out_len do
-                            io.write(helper.n_to_w[dec_input[i][j]] .. ' ')
-                        end
-                        print('')
-                        io.write('Decoder Output: ')
-                        for j = 1, max_out_len do
-                            io.write(helper.n_to_w[embs[i][j]] .. ' ')
-                        end
-                        print('')
-                        io.write('Ground Truth: ')
-                        for j = 1, max_out_len do
-                            io.write(helper.n_to_w[output[i][j]] .. ' ')
-                        end
-                        print('')
-                        print('***********')
+            if batch % opt.print_examples_every == 0 then
+                local enc_input = enc_inputs[batch]
+                local dec_input = dec_inputs[batch]
+                local output = outputs[batch]
+                local closs = 0
+                    for i = 1, opt.batch_size do
+                    io.write('Encoder Input: ')
+                    for j = 1, opt.max_in_len do
+                        io.write(wmap[enc_input[i][j]] .. ' ')
                     end
-                    print('------------------')
+                    print('')
+                    io.write('Decoder Input: ')
+                    for j =1, opt.max_out_len do
+                        io.write(wmap[dec_input[i][j]] .. ' ')
+                    end
+                    print('')
+                    io.write('Decoder Output: ')
+                    for j = 1, opt.max_out_len do
+                        io.write(wmap[embs[i][j]] .. ' ')
+                    end
+                    print('')
+                    io.write('Ground Truth: ')
+                    for j = 1, opt.max_out_len do
+                        io.write(wmap[output[i][j]] .. ' ')
+                    end
+                    print('')
+                    print('***********')
                 end
+                print('------------------')
             end
 
 
@@ -290,9 +307,10 @@ function run_one_batch(algorithm)
         return optim.sgd(feval, params, optim_config)
     end
 end
+
 function accuracy(embs)
     local acc, nwords = 0, 0
-    for n = 1, batch_size do
+    for n = 1, opt.batch_size do
         nwords = nwords + out_length[n]
         for t = 1, out_length[n] do
             if embs[n][t] == output[n][t] then

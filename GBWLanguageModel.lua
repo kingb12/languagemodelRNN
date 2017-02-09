@@ -171,10 +171,10 @@ local function print_info(learningRate, iteration, currentError)
     print("Current Loss: ", currentError)
     print("Current Learing Rate: ", learningRate)
     if opt.save_model_at_epoch then
-        pcall(torch.save(opt.save_prefix..'.th7', lm))
+        pcall(torch.save, opt.save_prefix..'.th7', lm)
     end
     if opt.save_prefix_backup ~= '' then
-        pcall(torch.save(opt.save_prefix_backup..opt.save_prefix..'.th7', lm))
+        pcall(torch.save, opt.save_prefix_backup..opt.save_prefix..'.th7', lm)
     end
 end
 
