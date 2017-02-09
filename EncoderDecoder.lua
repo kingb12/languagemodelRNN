@@ -218,11 +218,11 @@ local function feval(params)
     -- forward pass
     for _,v in pairs(enc_rnns) do v:resetStates() end
     for _,v in pairs(dec_rnns) do v:resetStates() end
-    local enc_fwd = enc:forward(enc_input)
-    local dec_h0 = enc_fwd[{{}, opt.max_in_len, {}}]
-    local dec_fwd = dec:forward({cb:clone(), dec_h0, dec_input})
+    local enc_fwd = enc:forward(enc_input) -- enc_fwd is h1...hN
+    local dec_h0 = enc_fwd[{{}, opt.max_in_len, {}}] -- grab the last hidden state from the encoder, which will be at index max_in_len
+    local dec_fwd = dec:forward({cb:clone(), dec_h0, dec_input}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
     dec_fwd = torch.reshape(dec_fwd, opt.batch_size, opt.max_out_len, opt.vocab_size)
-    local loss = criterion:forward(dec_fwd, output)
+    local loss = criterion:forward(dec_fwd, output) -- loss is essentially same as if we were a language model, ignoring padding
     _, embs = torch.max(dec_fwd, 3)
     embs = torch.reshape(embs, opt.batch_size, opt.max_out_len)
 
