@@ -53,6 +53,7 @@ cmd:option('-algorithm', 'sgd')
 cmd:option('-print_loss_every', 1000)
 cmd:option('-save_model_at_epoch', false)
 cmd:option('-save_prefix', '/homes/iws/kingb12/LanguageModelRNN/newcudamodel')
+cmd:option('-save_prefix_backup', '')
 cmd:option('-run', false)
 
 
@@ -161,7 +162,7 @@ if opt.gpu then
     criterion = criterion:cuda()
     lm = lm:cuda()
 end
-local params, gradParams = lm:getParameters()
+local params, gradParams = combine_all_parameters(enc, dec)
 local batch = 1
 local epoch = 0
 
@@ -170,7 +171,10 @@ local function print_info(learningRate, iteration, currentError)
     print("Current Loss: ", currentError)
     print("Current Learing Rate: ", learningRate)
     if opt.save_model_at_epoch then
-        torch.save(opt.save_prefix..'.th7', lm)
+        pcall(torch.save(opt.save_prefix..'.th7', lm))
+    end
+    if opt.save_prefix_backup ~= '' then
+        pcall(torch.save(opt.save_prefix_backup..opt.save_prefix..'.th7', lm))
     end
 end
 
@@ -205,6 +209,10 @@ function train_model()
     else
         while (epoch < max_epochs) do
             local _, loss = optim.sgd(feval, params, optim_config)
+            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss[1]) end
+            if (batch == 1) then
+                print_info(optim_config.learningRate, epoch, loss[1])
+            end
         end
     end
 end
