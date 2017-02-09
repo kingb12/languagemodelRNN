@@ -50,7 +50,7 @@ cmd:option('-lr_decay', 0.0)
 cmd:option('-algorithm', 'sgd')
 
 --Output Options
-cmd:option('-print_example_loss', false)
+cmd:option('-print_loss_every', 1000)
 cmd:option('-save_model_at_epoch', false)
 cmd:option('-save_prefix', '/homes/iws/kingb12/LanguageModelRNN/newcudamodel')
 cmd:option('-run', false)
@@ -197,7 +197,7 @@ function train_model()
     if opt.algorithm == 'adam' then
         while (epoch < max_epochs) do
             local _, loss = optim.adam(feval, params, optim_config)
-            if (batch % 100) == 0 then print('Loss: ', loss[1]) end
+            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss[1]) end
             if (batch == 1) then
                 print_info(optim_config.learningRate, epoch, loss[1])
             end
