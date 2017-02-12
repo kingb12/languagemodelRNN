@@ -141,7 +141,13 @@ end
 
 
 -- =============================================== TRAINING ============================================================
-
+-- logging
+if opt.save_model_at_epoch then
+    logger = optim.Logger(opt.save_prefix .. '.log')
+    logger:setNames{'Epoch','Training Loss.' }
+    logger:display(false) -- prevents display on remote hosts
+    logger:style('+-') -- points and lines for plot
+end
 -- Training --
 -- We'll use NLLCriterion to maximize the likelihood for correct words, and StochasticGradientDescent to run it.
 if opt.weights == 'inverse_freq' then
@@ -172,6 +178,9 @@ local function print_info(learningRate, iteration, currentError)
     print("Current Learing Rate: ", learningRate)
     if opt.save_model_at_epoch then
         pcall(torch.save, opt.save_prefix..'.th7', lm)
+        logger:add{epoch - 1, currentError }
+        logger:plot()
+
     end
     if opt.save_prefix_backup ~= '' then
         pcall(torch.save, opt.save_prefix_backup..opt.save_prefix..'.th7', lm)
