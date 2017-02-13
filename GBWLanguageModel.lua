@@ -144,9 +144,9 @@ end
 -- logging
 if opt.save_model_at_epoch then
     logger = optim.Logger(opt.save_prefix .. '.log')
-    logger:setNames{'Epoch','Training Loss.' }
+    logger:setNames{'Epoch','Training Loss.', 'Learning Rate:  '}
     logger:display(false) -- prevents display on remote hosts
-    logger:style('+-') -- points and lines for plot
+    logger:style{'+-'} -- points and lines for plot
 end
 -- Training --
 -- We'll use NLLCriterion to maximize the likelihood for correct words, and StochasticGradientDescent to run it.
@@ -168,7 +168,7 @@ if opt.gpu then
     criterion = criterion:cuda()
     lm = lm:cuda()
 end
-local params, gradParams = combine_all_parameters(enc, dec)
+local params, gradParams = combine_all_parameters(lm)
 local batch = 1
 local epoch = 0
 
@@ -178,7 +178,7 @@ local function print_info(learningRate, iteration, currentError)
     print("Current Learing Rate: ", learningRate)
     if opt.save_model_at_epoch then
         pcall(torch.save, opt.save_prefix..'.th7', lm)
-        logger:add{epoch - 1, currentError }
+        logger:add{epoch - 1, currentError, learningRate}
         logger:plot()
 
     end
@@ -187,7 +187,7 @@ local function print_info(learningRate, iteration, currentError)
     end
 end
 
-local optim_config = {learningRate = learningRate }
+optim_config = {learningRate = learningRate }
 
 local function feval(params)
     gradParams:zero()
