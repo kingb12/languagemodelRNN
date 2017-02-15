@@ -103,7 +103,7 @@ if opt.init_enc_from == '' then
     enc = nn.Sequential()
     -- Input Layer: Embedding LookupTable
     enc:add(enc_lu) -- takes a sequence of word indexes and returns a sequence of word embeddings
-    enc_rnns = {}
+    enc._rnns = {}
 
     -- Hidden Layers: Two LSTM layers, stacked
     -- next steps: dropout, etc.
@@ -115,7 +115,7 @@ if opt.init_enc_from == '' then
             lstm = nn.LSTM(opt.hidden_size, opt.hidden_size)
         end
         lstm.remember_states = true
-        enc_rnns[#enc_rnns + 1] = lstm
+        enc._rnns[#enc._rnns + 1] = lstm
         enc:add(lstm)
         if dropout then lm:add(nn.Dropout(opt.dropout)) end
     end
@@ -124,6 +124,7 @@ if opt.init_enc_from == '' then
 else
     -- load a model from a th7 file
     enc = torch.load(opt.init_enc_from)
+
 end
 
 -- ***** DECODER *****
@@ -163,6 +164,7 @@ if opt.init_dec_from == '' then
 
     -- now combine them into a graph module
     dec = nn.gModule({dec_c0, dec_h0, dec_lu}, {dec_lin}) -- {inputs}, {outputs}
+    dec._rnns = dec_rnns
 
 else
     -- load a model from a th7 file
@@ -226,8 +228,8 @@ local function feval(params)
     local output = outputs[batch]
 
     -- forward pass
-    for _,v in pairs(enc_rnns) do v:resetStates() end
-    for _,v in pairs(dec_rnns) do v:resetStates() end
+    for _,v in pairs(enc._rnns) do v:resetStates() end
+    for _,v in pairs(dec._rnns) do v:resetStates() end
     local enc_fwd = enc:forward(enc_input) -- enc_fwd is h1...hN
     local dec_h0 = enc_fwd[{{}, opt.max_in_len, {}}] -- grab the last hidden state from the encoder, which will be at index max_in_len
     local dec_fwd = dec:forward({cb:clone(), dec_h0, dec_input}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
