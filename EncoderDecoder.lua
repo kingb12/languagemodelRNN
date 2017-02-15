@@ -178,6 +178,13 @@ criterion = nn.TemporalCrossEntropyCriterion()
 local cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.hidden_sized)
 local hzeros = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.max_in_len-1, opt.hidden_size)
 
+-- logging
+if opt.save_model_at_epoch then
+    logger = optim.Logger(opt.save_prefix .. '.log')
+    logger:setNames{'Epoch','Training Loss.', 'Learning Rate:  '}
+    logger:display(false) -- prevents display on remote hosts
+    logger:style{'+-'} -- points and lines for plot
+end
 
 if opt.gpu then
     criterion = criterion:cuda()
@@ -197,6 +204,8 @@ local function print_info(learningRate, iteration, currentError)
     if opt.save_model_at_epoch then
         pcall(torch.save, opt.save_prefix..'_enc.th7', enc)
         pcall(torch.save, opt.save_prefix..'_dec.th7', enc)
+        logger:add{epoch - 1, currentError, learningRate}
+        logger:plot()
         if (opt.backup_save_dir ~= '') then 
             pcall(torch.save, opt.backup_save_dir..opt.save_prefix..'_enc.th7', enc)
             pcall(torch.save, opt.backup_save_dir..opt.save_prefix..'_dec.th7', enc)
