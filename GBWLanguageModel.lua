@@ -171,6 +171,7 @@ end
 local params, gradParams = combine_all_parameters(lm)
 local batch = 1
 local epoch = 0
+local loss_this_epoch = 0.0
 
 local function print_info(learningRate, iteration, currentError)
     print("Current Iteration: ", iteration)
@@ -210,17 +211,21 @@ function train_model()
     if opt.algorithm == 'adam' then
         while (epoch < max_epochs) do
             local _, loss = optim.adam(feval, params, optim_config)
-            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss[1]) end
+            loss_this_epoch = loss_this_epoch + (loss[1] / #train_set)
+            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
             if (batch == 1) then
-                print_info(optim_config.learningRate, epoch, loss[1])
+                print_info(optim_config.learningRate, epoch, loss_this_epoch)
+                loss_this_epoch = 0.0
             end
         end
     else
         while (epoch < max_epochs) do
             local _, loss = optim.sgd(feval, params, optim_config)
-            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss[1]) end
+            loss_this_epoch = loss_this_epoch + (loss[1] / #train_set)
+            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
             if (batch == 1) then
-                print_info(optim_config.learningRate, epoch, loss[1])
+                print_info(optim_config.learningRate, epoch, loss_this_epoch)
+                loss_this_epoch = 0.0
             end
         end
     end

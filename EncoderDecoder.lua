@@ -196,6 +196,7 @@ local params, gradParams = combine_all_parameters(enc, dec)
 local batch = 1
 local epoch = 0
 local embs
+local loss_this_epoch = 0
 
 local function print_info(learningRate, iteration, currentError)
     print("Current Iteration: ", iteration)
@@ -255,68 +256,66 @@ local function feval(params)
 end
 
 function train_model()
-    if opt.algorithm == 'adam' then
-        while (epoch < opt.max_epochs) do
-            local examples = (batch-1)*opt.batch_size
+    while (epoch < opt.max_epochs) do
+        local examples = (batch-1)*opt.batch_size
+        local output = outputs[batch]
+        local out_length = out_lengths[{{examples+1, examples+opt.batch_size}}]
+        local in_length = in_lengths[{{examples+1, examples+opt.batch_size}}]
+        local _, loss = run_one_batch(opt.algorithm)
+        loss_this_epoch = loss_this_epoch + (loss[1] / #train_set)
+        if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
+
+        -- print info
+        if (batch == 1) then
+            print_info(optim_config.learningRate, epoch, loss_this_epoch)
+            loss_this_epoch = 0.0
+        end
+
+        -- print accuracy (handled here so we don't have to pass dec_fwd/embs out of feval)
+        if batch % opt.print_acc_every == 0 then
+            local acc, nwords = 0, 0
+            for n = 1, opt.batch_size do
+                nwords = nwords + out_length[n]
+                for t = 1, out_length[n] do
+                    if embs[n][t] == output[n][t] then
+                        acc = acc + 1
+                    end
+                end
+            end
+            acc = acc / nwords
+            print('Accuracy: ', acc)
+        end
+
+        -- print examples
+        if batch % opt.print_examples_every == 0 then
+            local enc_input = enc_inputs[batch]
+            local dec_input = dec_inputs[batch]
             local output = outputs[batch]
-            local out_length = out_lengths[{{examples+1, examples+opt.batch_size}}]
-            local in_length = in_lengths[{{examples+1, examples+opt.batch_size}}]
-            local _, loss = run_one_batch(opt.algorithm)
-            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss[1]) end
-
-            -- print info
-            if (batch == 1) then
-                print_info(optim_config.learningRate, epoch, loss[1])
-            end
-
-            -- print accuracy (handled here so we don't have to pass dec_fwd/embs out of feval)
-            if batch % opt.print_acc_every == 0 then
-                local acc, nwords = 0, 0
-                for n = 1, opt.batch_size do
-                    nwords = nwords + out_length[n]
-                    for t = 1, out_length[n] do
-                        if embs[n][t] == output[n][t] then
-                            acc = acc + 1
-                        end
-                    end
+            local closs = 0
+                for i = 1, opt.batch_size do
+                io.write('Encoder Input: ')
+                for j = 1, opt.max_in_len do
+                    io.write(wmap[enc_input[i][j]] .. ' ')
                 end
-                acc = acc / nwords
-                print('Accuracy: ', acc)
-            end
-
-            -- print examples
-            if batch % opt.print_examples_every == 0 then
-                local enc_input = enc_inputs[batch]
-                local dec_input = dec_inputs[batch]
-                local output = outputs[batch]
-                local closs = 0
-                    for i = 1, opt.batch_size do
-                    io.write('Encoder Input: ')
-                    for j = 1, opt.max_in_len do
-                        io.write(wmap[enc_input[i][j]] .. ' ')
-                    end
-                    print('')
-                    io.write('Decoder Input: ')
-                    for j =1, opt.max_out_len do
-                        io.write(wmap[dec_input[i][j]] .. ' ')
-                    end
-                    print('')
-                    io.write('Decoder Output: ')
-                    for j = 1, opt.max_out_len do
-                        io.write(wmap[embs[i][j]] .. ' ')
-                    end
-                    print('')
-                    io.write('Ground Truth: ')
-                    for j = 1, opt.max_out_len do
-                        io.write(wmap[output[i][j]] .. ' ')
-                    end
-                    print('')
-                    print('***********')
+                print('')
+                io.write('Decoder Input: ')
+                for j =1, opt.max_out_len do
+                    io.write(wmap[dec_input[i][j]] .. ' ')
                 end
-                print('------------------')
+                print('')
+                io.write('Decoder Output: ')
+                for j = 1, opt.max_out_len do
+                    io.write(wmap[embs[i][j]] .. ' ')
+                end
+                print('')
+                io.write('Ground Truth: ')
+                for j = 1, opt.max_out_len do
+                    io.write(wmap[output[i][j]] .. ' ')
+                end
+                print('')
+                print('***********')
             end
-
-
+            print('------------------')
         end
     end
 end
