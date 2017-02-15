@@ -44,6 +44,7 @@ cmd:option('-batch_loss_file', '')
 cmd:option('-num_samples', 10)
 cmd:option('-max_sample_length', 10)
 cmd:option('-max_gen_example_length', 10)
+cmd:option('-no_arg_max', false)
 cmd:option('-out', '')
 
 local opt = cmd:parse(arg)
@@ -128,6 +129,9 @@ if opt.calculate_losses then
 end
 
 sampler = opt.gpu and nn.Sampler():cuda() or nn.Sampler()
+if opt.no_arg_max then 
+    sampler.argmax = false
+end
 
 function sample(model, sequence, max_samples)
     if max_samples == nil then
