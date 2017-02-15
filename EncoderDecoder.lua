@@ -203,12 +203,12 @@ local function print_info(learningRate, iteration, currentError)
     print("Current Learing Rate: ", learningRate)
     if opt.save_model_at_epoch then
         pcall(torch.save, opt.save_prefix..'_enc.th7', enc)
-        pcall(torch.save, opt.save_prefix..'_dec.th7', enc)
+        pcall(torch.save, opt.save_prefix..'_dec.th7', dec)
         logger:add{epoch - 1, currentError, learningRate}
         logger:plot()
         if (opt.backup_save_dir ~= '') then 
             pcall(torch.save, opt.backup_save_dir..opt.save_prefix..'_enc.th7', enc)
-            pcall(torch.save, opt.backup_save_dir..opt.save_prefix..'_dec.th7', enc)
+            pcall(torch.save, opt.backup_save_dir..opt.save_prefix..'_dec.th7', dec)
         end    
     end
 end
