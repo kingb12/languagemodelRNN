@@ -28,6 +28,7 @@ cmd:option('-max_batch_size', 50)
 cmd:option('-max_seq_length', 30)
 cmd:option('-no_dataset', false)
 cmd:option('-load_bucketed_training_set', '/homes/iws/kingb12/data/BillionWords/25k_V_bucketed_set.th7')
+cmd:option('-load_bucketed_valid_set', '/homes/iws/kingb12/data/BillionWords/25k_V_bucketed_valid_set.th7')
 cmd:option('-train_file', '')
 cmd:option('-wmap_file', "/homes/iws/kingb12/data/BillionWords/25k_V_word_map.th7")
 cmd:option('-wfreq_file', "/homes/iws/kingb12/data/BillionWords/25k_V_word_freq.th7")
@@ -51,6 +52,7 @@ cmd:option('-algorithm', 'sgd')
 
 --Output Options
 cmd:option('-print_loss_every', 1000)
+cmd:option('-valid_loss_every', 0)
 cmd:option('-save_model_at_epoch', false)
 cmd:option('-save_prefix', '/homes/iws/kingb12/LanguageModelRNN/newcudamodel')
 cmd:option('-save_prefix_backup', '')
@@ -144,10 +146,11 @@ end
 -- logging
 if opt.save_model_at_epoch then
     logger = optim.Logger(opt.save_prefix .. '.log')
-    logger:setNames{'Epoch','Training Loss.', 'Learning Rate:  '}
+    logger:setNames{'Epoch','Training Loss', 'Learning Rate', 'Valid Loss'}
     logger:display(false) -- prevents display on remote hosts
     logger:style{'+-'} -- points and lines for plot
 end
+
 -- Training --
 -- We'll use NLLCriterion to maximize the likelihood for correct words, and StochasticGradientDescent to run it.
 if opt.weights == 'inverse_freq' then
@@ -172,14 +175,15 @@ local params, gradParams = combine_all_parameters(lm)
 local batch = 1
 local epoch = 0
 local loss_this_epoch = 0.0
+local v_loss
 
-local function print_info(learningRate, iteration, currentError)
+local function print_info(learningRate, iteration, currentError, valid_loss)
     print("Current Iteration: ", iteration)
     print("Current Loss: ", currentError)
     print("Current Learing Rate: ", learningRate)
     if opt.save_model_at_epoch then
         pcall(torch.save, opt.save_prefix..'.th7', lm)
-        logger:add{epoch - 1, currentError, learningRate}
+        logger:add{epoch - 1, currentError, learningRate, valid_loss}
         logger:plot()
 
     end
@@ -212,9 +216,15 @@ function train_model()
         while (epoch < max_epochs) do
             local _, loss = optim.adam(feval, params, optim_config)
             loss_this_epoch = loss_this_epoch + (loss[1] / #train_set)
-            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
+            if (batch % opt.print_loss_every) == 0 then
+                print('Loss: ', loss_this_epoch)
+            end
             if (batch == 1) then
-                print_info(optim_config.learningRate, epoch, loss_this_epoch)
+                local v_loss
+                if (epoch % opt.valid_loss_every) == 0 then
+                    v_loss = get_validation_loss(valid_set)
+                end
+                print_info(optim_config.learningRate, epoch, loss_this_epoch, v_loss)
                 loss_this_epoch = 0.0
             end
         end
@@ -222,13 +232,35 @@ function train_model()
         while (epoch < max_epochs) do
             local _, loss = optim.sgd(feval, params, optim_config)
             loss_this_epoch = loss_this_epoch + (loss[1] / #train_set)
-            if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
+            if (batch % opt.print_loss_every) == 0 then
+                print('Loss: ', loss_this_epoch)
+            end
             if (batch == 1) then
-                print_info(optim_config.learningRate, epoch, loss_this_epoch)
+                if (epoch % opt.valid_loss_every) == 0 then
+                    v_loss = get_validation_loss(valid_set)
+                end
+                print_info(optim_config.learningRate, epoch, loss_this_epoch, v_loss)
                 loss_this_epoch = 0.0
             end
         end
     end
+end
+
+-- Validation In Training
+if opt.valid_loss_every > 0 then
+    valid_set = torch.load(opt.load_bucketed_valid_set)
+    v_loss = get_validation_loss(valid_set)
+end
+
+function get_validation_loss(valid_set)
+    lm:evaluate()
+    local v_loss = 0.0
+    for i=1, #valid_set do
+        local outputs = lm:forward(valid_set[i][1])
+        local loss = criterion:forward(outputs, valid_set[i][2])
+        v_loss = v_loss + (loss / #valid_set)
+    end
+    return v_loss
 end
 
 if opt.run then
