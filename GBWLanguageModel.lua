@@ -247,10 +247,6 @@ function train_model()
 end
 
 -- Validation In Training
-if opt.valid_loss_every > 0 then
-    valid_set = torch.load(opt.load_bucketed_valid_set)
-    v_loss = get_validation_loss(valid_set)
-end
 
 function get_validation_loss(valid_set)
     lm:evaluate()
@@ -262,6 +258,24 @@ function get_validation_loss(valid_set)
     end
     return v_loss
 end
+
+if opt.valid_loss_every > 0 then
+    valid_set = torch.load(opt.load_bucketed_valid_set)
+    valid_set = clean_dataset(valid_set, opt.max_batch_size, opt.max_seq_length, tensorType)
+    local t_set = {}
+    -- Must use equal batch sizes in order to remember states
+    for i=1,#valid_set do
+        if valid_set[i][1]:size(1) == 50 and valid_set[i][1]:size(2) <= opt.max_seq_length then
+            t_set[#t_set + 1] = valid_set[i]
+        end
+    end
+    valid_set = t_set
+    function valid_set:size()
+        return #valid_set
+    end
+    v_loss = get_validation_loss(valid_set)
+end
+
 
 if opt.run then
     train_model()

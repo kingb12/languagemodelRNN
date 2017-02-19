@@ -11,10 +11,11 @@ package.path = ';/homes/iws/kingb12/LanguageModelRNN/?.lua;'..package.path
 require 'torch'
 require 'nn'
 require 'nnx'
+require 'nngraph'
 require 'util'
-require 'torch-rnn'
 require 'DynamicView'
-require 'TemporalCrossEtropyCriterion'
+require 'TemporalCrossEntropyCriterion'
+require 'LSTM'
 require 'Sampler'
 cjson = require 'cjson'
 require 'cutorch'
@@ -68,20 +69,20 @@ local opt = cmd:parse(arg)
 train_enc_inputs = torch.load(opt.train_enc_inputs)
 train_dec_inputs = torch.load(opt.train_dec_inputs)
 train_outputs = torch.load(opt.train_outputs)
-train_in_lengths = torch.load(op.train_in_lengths)
-train_out_lengths = torch.load(op.train_out_lengths)
+train_in_lengths = torch.load(opt.train_in_lengths)
+train_out_lengths = torch.load(opt.train_out_lengths)
 
 valid_enc_inputs = torch.load(opt.valid_enc_inputs)
 valid_dec_inputs = torch.load(opt.valid_dec_inputs)
 valid_outputs = torch.load(opt.valid_outputs)
-valid_in_lengths = torch.load(op.valid_in_lengths)
-valid_out_lengths = torch.load(op.valid_out_lengths)
+valid_in_lengths = torch.load(opt.valid_in_lengths)
+valid_out_lengths = torch.load(opt.valid_out_lengths)
 
 test_enc_inputs = torch.load(opt.test_enc_inputs)
 test_dec_inputs = torch.load(opt.test_dec_inputs)
 test_outputs = torch.load(opt.test_outputs)
-test_in_lengths = torch.load(op.test_in_lengths)
-test_out_lengths = torch.load(op.test_out_lengths)
+test_in_lengths = torch.load(opt.test_in_lengths)
+test_out_lengths = torch.load(opt.test_out_lengths)
 
 enc = torch.load(opt.enc)
 dec = torch.load(opt.dec)
@@ -154,12 +155,12 @@ function generate_samples(data_set, outputs, num_samples)
     return results
 end
 
-local cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), enc_inputs[1]:size(1), enc:forward(enc_inputs[1]):size(3))
+local cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), train_enc_inputs[1]:size(1), enc:forward(train_enc_inputs[1]):size(3))
 
 -- calculate perplexity
 function perplexity_over_dataset(enc, dec, enc_inputs, dec_inputs, in_lengths, out_lengths, outputs)
     local data_perplexity = 0
-    for i=1,#enc_inputs do
+    for i=1,enc_inputs:size(1) do
         for _,v in pairs(enc._rnns) do v:resetStates() end
         for _,v in pairs(dec._rnns) do v:resetStates() end
         local enc_input = enc_inputs[i]
@@ -168,7 +169,7 @@ function perplexity_over_dataset(enc, dec, enc_inputs, dec_inputs, in_lengths, o
         local enc_fwd = enc:forward(enc_input) -- enc_fwd is h1...hN
         local dec_h0 = enc_fwd[{{}, enc_inputs[1]:size(2), {}}] -- grab the last hidden state from the encoder, which will be at index max_in_len
         local dec_fwd = dec:forward({cb:clone(), dec_h0, dec_input}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
-        dec_fwd = torch.reshape(dec_fwd, opt.batch_size, opt.max_out_len, opt.vocab_size)
+        dec_fwd = torch.reshape(dec_fwd, enc_input:size(1), dec_input:size(2), #helper.n_to_w)
         local loss = criterion:forward(dec_fwd, output) -- loss is essentially same as if we were a language model, ignoring padding
         loss = loss / (in_lengths[i] * enc_input:size(1))
         local batch_perplexity = torch.exp(loss)

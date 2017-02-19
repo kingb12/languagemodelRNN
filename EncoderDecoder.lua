@@ -265,7 +265,7 @@ function train_model()
         local out_length = out_lengths[{{examples+1, examples+opt.batch_size}}]
         local in_length = in_lengths[{{examples+1, examples+opt.batch_size}}]
         local _, loss = run_one_batch(opt.algorithm)
-        loss_this_epoch = loss_this_epoch + (loss[1] / #train_set)
+        loss_this_epoch = loss_this_epoch + (loss[1] / enc_inputs:size(1))
         if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
 
         -- print info

@@ -153,7 +153,7 @@ function sequence_to_string(seq)
     local str = ''
     if seq:dim() == 2 then seq = seq[1] end
     for i=1, seq:size()[1] do
-        local next_word = wmap[seq[i]] == nil and '<UNK>' or wmap[seq[i]]
+        local next_word = wmap[seq[i]] == nil and '<UNK2>' or wmap[seq[i]]
         str = str..' '..next_word
     end
     return str
