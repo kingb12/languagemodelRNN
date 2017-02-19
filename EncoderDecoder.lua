@@ -30,7 +30,7 @@ cmd:option('-dec_inputs', '../data/rl_dec_inputs.th7')
 cmd:option('-outputs', '../data/rl_outputs.th7')
 cmd:option('-in_lengths', '../data/rl_in_lengths.th7')
 cmd:option('-out_lengths', '../data/rl_out_lengths.th7')
-cmd:option('-word_map', '../data/rl_wmap.th7')
+cmd:option('-helper', '../data/rl_helper.th7')
 
 cmd:option('-max_in_len', 200, 'max encoder sequence length')
 cmd:option('-max_out_len', 300, 'max decoder sequence length')
@@ -43,7 +43,6 @@ cmd:option('-init_enc_from', '')
 cmd:option('-init_dec_from', '')
 cmd:option('-wordvec_size', 100)
 cmd:option('-hidden_size', 512)
-cmd:option('-vocab_size', 25000)
 cmd:option('-dropout', 0)
 cmd:option('-num_enc_layers', 1)
 cmd:option('-num_dec_layers', 1)
@@ -89,12 +88,14 @@ outputs = torch.load(opt.outputs) -- recipe shifted one over (like a LM)
 in_lengths = torch.load(opt.in_lengths) -- lengths specifying end of padding
 out_lengths = torch.load(opt.out_lengths) -- lengths specifying end of padding
 wmap = torch.load(opt.word_map) -- translation from # to string
+helper = torch.load(opt.helper) -- has word_map, reverse, etc.
+local vocab_size = #helper.n_to_w
 
 -- =========================================== THE MODEL ===============================================================
 
 -- ***** ENCODER *****
 
-local lu = nn.LookupTable(opt.vocab_size, opt.wordvec_size)
+local lu = nn.LookupTable(vocab_size, opt.wordvec_size)
 local enc_lu, dec_lu = lu, lu:clone('weight', 'gradWeight')
 if opt.init_enc_from == '' then
     -- The Word Embedding Layer --
@@ -160,7 +161,7 @@ if opt.init_dec_from == '' then
     end
     -- now linear transition layers
     local dec_v1 = nn.View(-1, opt.hidden_size)(previous)
-    local dec_lin = nn.Linear(opt.hidden_size, opt.vocab_size)(dec_v1)
+    local dec_lin = nn.Linear(opt.hidden_size, vocab_size)(dec_v1)
 
     -- now combine them into a graph module
     dec = nn.gModule({dec_c0, dec_h0, dec_lu}, {dec_lin}) -- {inputs}, {outputs}
@@ -233,14 +234,14 @@ local function feval(params)
     local enc_fwd = enc:forward(enc_input) -- enc_fwd is h1...hN
     local dec_h0 = enc_fwd[{{}, opt.max_in_len, {}}] -- grab the last hidden state from the encoder, which will be at index max_in_len
     local dec_fwd = dec:forward({cb:clone(), dec_h0, dec_input}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
-    dec_fwd = torch.reshape(dec_fwd, opt.batch_size, opt.max_out_len, opt.vocab_size)
+    dec_fwd = torch.reshape(dec_fwd, opt.batch_size, opt.max_out_len, vocab_size)
     local loss = criterion:forward(dec_fwd, output) -- loss is essentially same as if we were a language model, ignoring padding
     _, embs = torch.max(dec_fwd, 3)
     embs = torch.reshape(embs, opt.batch_size, opt.max_out_len)
 
     -- backward pass
     local cgrd = criterion:backward(dec_fwd, output)
-    cgrd = torch.reshape(cgrd, opt.batch_size*opt.max_out_len, opt.vocab_size)
+    cgrd = torch.reshape(cgrd, opt.batch_size*opt.max_out_len, vocab_size)
     local hlgrad, dgrd = table.unpack(dec:backward({dec_h0, dec_input}, cgrd))
     local hlgrad = torch.reshape(hlgrad, opt.batch_size, 1, opt.hidden_size)
     local hgrad = torch.cat(hzeros, hlgrad, 2)
