@@ -87,9 +87,9 @@ dec_inputs = torch.load(opt.dec_inputs) -- recipe
 outputs = torch.load(opt.outputs) -- recipe shifted one over (like a LM)
 in_lengths = torch.load(opt.in_lengths) -- lengths specifying end of padding
 out_lengths = torch.load(opt.out_lengths) -- lengths specifying end of padding
-wmap = torch.load(opt.word_map) -- translation from # to string
 helper = torch.load(opt.helper) -- has word_map, reverse, etc.
 local vocab_size = #helper.n_to_w
+local wmap = helper.n_to_w
 
 -- =========================================== THE MODEL ===============================================================
 
