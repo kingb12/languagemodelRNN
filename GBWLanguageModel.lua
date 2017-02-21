@@ -256,6 +256,7 @@ function get_validation_loss(valid_set)
         local loss = criterion:forward(outputs, valid_set[i][2])
         v_loss = v_loss + (loss / #valid_set)
     end
+    lm:training()
     return v_loss
 end
 
