@@ -32,6 +32,12 @@ cmd:option('-in_lengths', '../data/rl_in_lengths.th7')
 cmd:option('-out_lengths', '../data/rl_out_lengths.th7')
 cmd:option('-helper', '../data/rl_helper.th7')
 
+cmd:option('-valid_enc_inputs', '/homes/iws/kingb12/data/rl_venc_inputs.th7')
+cmd:option('-valid_dec_inputs', '/homes/iws/kingb12/data/rl_vdec_inputs.th7')
+cmd:option('-valid_outputs', '/homes/iws/kingb12/data/rl_voutputs.th7')
+cmd:option('-valid_in_lengths', '/homes/iws/kingb12/data/rl_vin_lengths.th7')
+cmd:option('-valid_out_lengths', '/homes/iws/kingb12/data/rl_vout_lengths.th7')
+
 cmd:option('-max_in_len', 200, 'max encoder sequence length')
 cmd:option('-max_out_len', 300, 'max decoder sequence length')
 cmd:option('-min_out_len', 1, 'min encoder sequence length')
@@ -63,6 +69,7 @@ cmd:option('-backup_save_dir', '')
 cmd:option('-run', false)
 cmd:option('-print_acc_every', 0)
 cmd:option('-print_examples_every', 0, 'how often to print out samples')
+cmd:option('-valid_loss_every', 0)
 
 
 -- Backend options
@@ -200,6 +207,7 @@ local batch = 1
 local epoch = 0
 local embs
 local loss_this_epoch = 0
+local v_loss, v_perp
 
 local function print_info(learningRate, iteration, currentError)
     print("Current Iteration: ", iteration)
@@ -208,7 +216,8 @@ local function print_info(learningRate, iteration, currentError)
     if opt.save_model_at_epoch then
         pcall(torch.save, opt.save_prefix..'_enc.th7', enc)
         pcall(torch.save, opt.save_prefix..'_dec.th7', dec)
-        logger:add{epoch - 1, currentError, learningRate}
+        local perplexity = torch.exp(currentError)
+        logger:add{epoch, currentError, learningRate, perplexity}
         logger:plot()
         if (opt.backup_save_dir ~= '') then 
             pcall(torch.save, opt.backup_save_dir..opt.save_prefix..'_enc.th7', enc)
@@ -265,12 +274,15 @@ function train_model()
         local out_length = out_lengths[{{examples+1, examples+opt.batch_size}}]
         local in_length = in_lengths[{{examples+1, examples+opt.batch_size}}]
         local _, loss = run_one_batch(opt.algorithm)
-        loss_this_epoch = loss_this_epoch + (loss[1] / enc_inputs:size(1))
+        loss_this_epoch = loss_this_epoch + loss[1] / (out_lengths[batch] * enc_inputs:size(1))
         if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
 
         -- print info
         if (batch == 1) then
-            print_info(optim_config.learningRate, epoch, loss_this_epoch)
+            if (epoch % opt.valid_loss_every == 0) then
+                v_loss, v_perp  = get_validation_loss(valid_enc_inputs, valid_dec_inputs, valid_outputs, valid_in_lengths, valid_out_lengths)
+            end
+            print_info(optim_config.learningRate, epoch, loss_this_epoch, v_loss, v_perp)
             loss_this_epoch = 0.0
         end
 
@@ -329,6 +341,36 @@ function run_one_batch(algorithm)
     else
         return optim.sgd(feval, params, optim_config)
     end
+end
+
+function get_validation_loss(venc_inputs, vdec_inputs, voutputs, vin_lengths, vout_lengths)
+    enc:evaluate()
+    dec:evaluate()
+    local v_loss = 0.0
+    local v_perp = 0.0
+    for i=1, venc_inputs:size(1) do
+        -- forward pass
+        for _,v in pairs(enc._rnns) do v:resetStates() end
+        for _,v in pairs(dec._rnns) do v:resetStates() end
+        local enc_fwd = enc:forward(venc_inputs[i]) -- enc_fwd is h1...hN
+        local dec_h0 = enc_fwd[{{}, opt.max_in_len, {}}] -- grab the last hidden state from the encoder, which will be at index max_in_len
+        local dec_fwd = dec:forward({cb:clone(), dec_h0, vdec_inputs[i]}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
+        dec_fwd = torch.reshape(dec_fwd, opt.batch_size, opt.max_out_len, vocab_size)
+        local loss = criterion:forward(dec_fwd, voutputs[i]) -- loss is essentially same as if we were a language model, ignoring padding
+        loss = loss / (vdec_inputs[i]:size(1) * vout_lengths[i])
+        v_loss = v_loss + (loss / venc_inputs:size(1))
+        v_perp = v_perp + (torch.exp(loss) / venc_inputs:size(1))
+    end
+    return v_loss, v_perp
+end
+
+if (opt.valid_loss_every > 0) then
+    valid_enc_inputs = torch.load(opt.valid_enc_inputs)
+    valid_dec_inputs = torch.load(opt.valid_dec_inputs)
+    valid_outputs = torch.load(opt.valid_outputs)
+    valid_in_lengths = torch.load(op.valid_in_lengths)
+    valid_out_lengths = torch.load(op.valid_out_lengths)
+    v_loss, v_perp = get_validation_loss(valid_enc_inputs, valid_dec_inputs, valid_outputs, valid_in_lengths, valid_out_lengths)
 end
 
 

@@ -20,6 +20,7 @@ require 'Sampler'
 cjson = require 'cjson'
 require 'cutorch'
 require 'cunn'
+require 'encdec_eval_functions'
 
 torch.setheaptracking(true)
 
@@ -199,6 +200,10 @@ if opt.generate_samples then
     output['valid_samples'] = generate_samples(valid_set, opt.num_samples)
     output['test_samples'] = generate_samples(test_set, opt.num_samples)
 end
+
+output['architecture'] = {}
+output['architecture']['encoder'] = tostring(enc)
+output['architecture']['decoder'] = tostring(dec)
 
 if opt.out ~= '' then
     local s = cjson.encode(output)
