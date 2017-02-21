@@ -19,6 +19,7 @@ require 'Sampler'
 require 'optim'
 require 'LSTM'
 require 'TemporalCrossEntropyCriterion'
+require 'encdec_eval_functions'
 
 -- =========================================== COMMAND LINE OPTIONS ====================================================
 
