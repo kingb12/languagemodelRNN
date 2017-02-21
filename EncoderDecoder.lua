@@ -349,21 +349,7 @@ end
 function get_validation_loss(venc_inputs, vdec_inputs, voutputs, vin_lengths, vout_lengths)
     enc:evaluate()
     dec:evaluate()
-    local v_loss = 0.0
-    local v_perp = 0.0
-    for i=1, venc_inputs:size(1) do
-        -- forward pass
-        for _,v in pairs(enc._rnns) do v:resetStates() end
-        for _,v in pairs(dec._rnns) do v:resetStates() end
-        local enc_fwd = enc:forward(venc_inputs[i]) -- enc_fwd is h1...hN
-        local dec_h0 = enc_fwd[{{}, opt.max_in_len, {}}] -- grab the last hidden state from the encoder, which will be at index max_in_len
-        local dec_fwd = dec:forward({cb:clone(), dec_h0, vdec_inputs[i]}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
-        dec_fwd = torch.reshape(dec_fwd, opt.batch_size, opt.max_out_len, vocab_size)
-        local loss = criterion:forward(dec_fwd, voutputs[i]) -- loss is essentially same as if we were a language model, ignoring padding
-        loss = loss / (torch.sum(vout_lengths[i]) / venc_inputs[i]:size(1))
-        v_loss = v_loss + (loss / venc_inputs:size(1))
-        v_perp = v_perp + (torch.exp(loss) / venc_inputs:size(1))
-    end
+    local v_perp, v_loss = perplexity_over_dataset(enc, dec, venc_inputs, vdec_inputs, vin_lengths, vout_lengths, voutputs)
     return v_loss, v_perp
 end
 

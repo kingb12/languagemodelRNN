@@ -93,6 +93,7 @@ end
 function perplexity_over_dataset(enc, dec, enc_inputs, dec_inputs, in_lengths, out_lengths, outputs)
     local cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), enc_inputs[1]:size(1), enc:forward(enc_inputs[1]):size(3))
     local data_perplexity = 0
+    local data_loss = 0
     for i=1,enc_inputs:size(1) do
         for _,v in pairs(enc._rnns) do v:resetStates() end
         for _,v in pairs(dec._rnns) do v:resetStates() end
@@ -107,7 +108,8 @@ function perplexity_over_dataset(enc, dec, enc_inputs, dec_inputs, in_lengths, o
         loss = loss / (torch.sum(out_lengths[i]) / enc_inputs[i]:size(1))
         local batch_perplexity = torch.exp(loss)
         data_perplexity = data_perplexity + (batch_perplexity / enc_inputs:size(1))
+        data_loss = data_loss + (loss / enc_inputs:size(1))
     end
-    return data_perplexity
+    return data_perplexity, data_loss
 end
 
