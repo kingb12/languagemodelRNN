@@ -274,7 +274,7 @@ function train_model()
         local out_length = out_lengths[batch]
         local in_length = in_lengths[{{examples+1, examples+opt.batch_size}}]
         local _, loss = run_one_batch(opt.algorithm)
-        loss_this_epoch = loss_this_epoch + loss[1] / (torch.sum(out_length))
+        loss_this_epoch = loss_this_epoch + loss[1] / (torch.sum(out_length) / enc_inputs[batch]:size(1))
         if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
 
         -- print info
@@ -357,7 +357,7 @@ function get_validation_loss(venc_inputs, vdec_inputs, voutputs, vin_lengths, vo
         local dec_fwd = dec:forward({cb:clone(), dec_h0, vdec_inputs[i]}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
         dec_fwd = torch.reshape(dec_fwd, opt.batch_size, opt.max_out_len, vocab_size)
         local loss = criterion:forward(dec_fwd, voutputs[i]) -- loss is essentially same as if we were a language model, ignoring padding
-        loss = loss / torch.sum(vout_lengths[i])
+        loss = loss / (torch.sum(vout_lengths[i]) / venc_inputs[i]:size(1))
         v_loss = v_loss + (loss / venc_inputs:size(1))
         v_perp = v_perp + (torch.exp(loss) / venc_inputs:size(1))
     end

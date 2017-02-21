@@ -104,10 +104,8 @@ function perplexity_over_dataset(enc, dec, enc_inputs, dec_inputs, in_lengths, o
         local dec_fwd = dec:forward({cb:clone(), dec_h0, dec_input}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
         dec_fwd = torch.reshape(dec_fwd, enc_input:size(1), dec_input:size(2), #helper.n_to_w)
         local loss = criterion:forward(dec_fwd, output) -- loss is essentially same as if we were a language model, ignoring padding
-        l1 = loss
-        loss = loss / torch.sum(out_lengths[i])
+        loss = loss / (torch.sum(out_lengths[i]) / enc_inputs[i]:size(1))
         local batch_perplexity = torch.exp(loss)
-        print(l1, torch.exp(l1), loss, batch_perplexity)
         data_perplexity = data_perplexity + (batch_perplexity / enc_inputs:size(1))
     end
     return data_perplexity
