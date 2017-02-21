@@ -271,10 +271,10 @@ function train_model()
     while (epoch < opt.max_epochs) do
         local examples = (batch-1)*opt.batch_size
         local output = outputs[batch]
-        local out_length = out_lengths[{{examples+1, examples+opt.batch_size}}]
+        local out_length = out_lengths[batch]
         local in_length = in_lengths[{{examples+1, examples+opt.batch_size}}]
         local _, loss = run_one_batch(opt.algorithm)
-        loss_this_epoch = loss_this_epoch + loss[1] / (out_lengths[batch] * enc_inputs:size(1))
+        loss_this_epoch = loss_this_epoch + loss[1] / (torch.sum(out_length))
         if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
 
         -- print info
