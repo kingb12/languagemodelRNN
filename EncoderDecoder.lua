@@ -207,17 +207,17 @@ local batch = 1
 local epoch = 0
 local embs
 local loss_this_epoch = 0
+local perp_this_epoch = 0
 local v_loss, v_perp
 
-local function print_info(learningRate, iteration, currentError, v_loss, v_perp)
+local function print_info(learningRate, iteration, currentError, v_loss, v_perp, t_perp)
     print("Current Iteration: ", iteration)
     print("Current Loss: ", currentError)
     print("Current Learing Rate: ", learningRate)
     if opt.save_model_at_epoch then
         pcall(torch.save, opt.save_prefix..'_enc.th7', enc)
         pcall(torch.save, opt.save_prefix..'_dec.th7', dec)
-        local perplexity = torch.exp(currentError)
-        logger:add{epoch, currentError, learningRate, perplexity, v_loss, v_perp}
+        logger:add{epoch, currentError, learningRate, t_perp, v_loss, v_perp}
         logger:plot()
         if (opt.backup_save_dir ~= '') then 
             pcall(torch.save, opt.backup_save_dir..opt.save_prefix..'_enc.th7', enc)
@@ -274,7 +274,10 @@ function train_model()
         local out_length = out_lengths[batch]
         local in_length = in_lengths[{{examples+1, examples+opt.batch_size}}]
         local _, loss = run_one_batch(opt.algorithm)
-        loss_this_epoch = loss_this_epoch + loss[1] / (torch.sum(out_length) / enc_inputs[batch]:size(1))
+        local normed_loss = loss[1] / (torch.sum(out_length) / enc_inputs[batch]:size(1))
+        loss_this_epoch = loss_this_epoch + (normed_loss / enc_inputs:size(1))
+        perp_this_epoch = perp_this_epoch + (torch.exp(normed_loss) / enc_inputs:size(1))
+
         if (batch % opt.print_loss_every) == 0 then print('Loss: ', loss_this_epoch) end
 
         -- print info
@@ -282,7 +285,7 @@ function train_model()
             if (epoch % opt.valid_loss_every == 0) then
                 v_loss, v_perp  = get_validation_loss(valid_enc_inputs, valid_dec_inputs, valid_outputs, valid_in_lengths, valid_out_lengths)
             end
-            print_info(optim_config.learningRate, epoch, loss_this_epoch, v_loss, v_perp)
+            print_info(optim_config.learningRate, epoch, loss_this_epoch, v_loss, v_perp, perp_this_epoch)
             loss_this_epoch = 0.0
         end
 
