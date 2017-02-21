@@ -357,7 +357,7 @@ function get_validation_loss(venc_inputs, vdec_inputs, voutputs, vin_lengths, vo
         local dec_fwd = dec:forward({cb:clone(), dec_h0, vdec_inputs[i]}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
         dec_fwd = torch.reshape(dec_fwd, opt.batch_size, opt.max_out_len, vocab_size)
         local loss = criterion:forward(dec_fwd, voutputs[i]) -- loss is essentially same as if we were a language model, ignoring padding
-        loss = loss / (vdec_inputs[i]:size(1) * vout_lengths[i])
+        loss = loss / torch.sum(vout_lengths[i])
         v_loss = v_loss + (loss / venc_inputs:size(1))
         v_perp = v_perp + (torch.exp(loss) / venc_inputs:size(1))
     end
@@ -368,8 +368,8 @@ if (opt.valid_loss_every > 0) then
     valid_enc_inputs = torch.load(opt.valid_enc_inputs)
     valid_dec_inputs = torch.load(opt.valid_dec_inputs)
     valid_outputs = torch.load(opt.valid_outputs)
-    valid_in_lengths = torch.load(op.valid_in_lengths)
-    valid_out_lengths = torch.load(op.valid_out_lengths)
+    valid_in_lengths = torch.load(opt.valid_in_lengths)
+    valid_out_lengths = torch.load(opt.valid_out_lengths)
     v_loss, v_perp = get_validation_loss(valid_enc_inputs, valid_dec_inputs, valid_outputs, valid_in_lengths, valid_out_lengths)
 end
 
