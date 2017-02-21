@@ -85,6 +85,7 @@ test_outputs = torch.load(opt.test_outputs)
 test_in_lengths = torch.load(opt.test_in_lengths)
 test_out_lengths = torch.load(opt.test_out_lengths)
 
+
 enc = torch.load(opt.enc)
 dec = torch.load(opt.dec)
 helper = torch.load(opt.helper)
@@ -108,13 +109,13 @@ end
 
 if opt.calculate_perplexity then
     print('Calculating Training Perplexity...')
-    local tr_perp = perplexity_over_dataset(model, train_set)
+    local tr_perp = perplexity_over_dataset(enc, dec, train_enc_inputs, train_dec_inputs, train_in_lengths, train_out_lengths, train_outputs)
     output['train_perplexity'] = tr_perp
     print('Calculating Valid Perplexity...')
-    local vd_perp = perplexity_over_dataset(model, valid_set)
+    local vd_perp = perplexity_over_dataset(enc, dec, valid_enc_inputs, valid_dec_inputs, valid_in_lengths, valid_out_lengths, valid_outputs)
     output['valid_perplexity'] = vd_perp
     print('Calculating Test Perplexity...')
-    local ts_perp = perplexity_over_dataset(model, test_set)
+    local ts_perp = perplexity_over_dataset(enc, dec, test_enc_inputs, test_dec_inputs, test_in_lengths, test_out_lengths, test_outputs)
     output['test_perplexity'] = ts_perp
 end
 
