@@ -294,6 +294,7 @@ function train_model()
             end
             print_info(optim_config.learningRate, epoch, loss_this_epoch, v_loss, v_perp, perp_this_epoch)
             loss_this_epoch = 0.0
+            perp_this_epoch = 0.0
         end
 
         -- print accuracy (handled here so we don't have to pass dec_fwd/embs out of feval)
@@ -317,7 +318,7 @@ function train_model()
             local dec_input = dec_inputs[batch]
             local output = outputs[batch]
             local closs = 0
-           d for i = 1, opt.batch_size do
+            for i = 1, opt.batch_size do
                 io.write('Encoder Input: ')
                 for j = 1, opt.max_in_len do
                     io.write(wmap[enc_input[i][j]] .. ' ')
