@@ -82,6 +82,7 @@ function generate_samples(data_set, outputs, num_samples)
         local x = example[example_no]
         x = x:reshape(1, x:size(1))
         local result = {}
+        result['encoder_input'] = sequence_to_string(x)
         result['generated'] = sequence_to_string(sample(enc, dec, nil, x, opt.max_sample_length))
         result['gold'] = sequence_to_string(outputs[t_set_idx][example_no])
         results[#results + 1] = result
