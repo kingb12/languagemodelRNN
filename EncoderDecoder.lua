@@ -55,6 +55,8 @@ cmd:option('-num_enc_layers', 1)
 cmd:option('-num_dec_layers', 1)
 cmd:option('-weights', '')
 cmd:option('-no_average_loss', false)
+cmd:option('-enc_remember_states', false)
+cmd:option('-dec_remember_states', false)
 
 -- Optimization options
 cmd:option('-max_epochs', 50)
@@ -123,7 +125,9 @@ if opt.init_enc_from == '' then
         else
             lstm = nn.LSTM(opt.hidden_size, opt.hidden_size)
         end
-        lstm.remember_states = true
+        if opt.enc_remember_states then
+            lstm.remember_states = true
+        end
         enc._rnns[#enc._rnns + 1] = lstm
         enc:add(lstm)
         if dropout then lm:add(nn.Dropout(opt.dropout)) end
@@ -160,7 +164,9 @@ if opt.init_dec_from == '' then
             lstm_n = lstm(previous)
             previous = lstm_n
         end
-        lstm.remember_states = true
+        if opt.dec_remember_states then
+            lstm.remember_states = true
+        end
         dec_rnns[#dec_rnns + 1] = lstm
         if opt.dropout > 0.0 then 
             local drop = nn.Dropout(opt.dropout)(previous)
@@ -311,7 +317,7 @@ function train_model()
             local dec_input = dec_inputs[batch]
             local output = outputs[batch]
             local closs = 0
-                for i = 1, opt.batch_size do
+           d for i = 1, opt.batch_size do
                 io.write('Encoder Input: ')
                 for j = 1, opt.max_in_len do
                     io.write(wmap[enc_input[i][j]] .. ' ')

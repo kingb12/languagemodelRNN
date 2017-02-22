@@ -14,37 +14,6 @@ function sample(encoder, decoder, enc_state, sequence, max_samples)
         enc_state = encoder:forward(sequence)
         sequence = torch.CudaTensor({helper.w_to_n['<beg>']}):reshape(1, 1)
     end
-    local cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), 1, enc_state:size(1))
-    local addition = torch.zeros(sequence:size(1)):cuda()
-    local output = torch.cat(sequence, addition , 2)
-    local y = decoder:forward(cb, enc_state, sequence)
-    local sampled = sampler:forward(y)
-    for i=1, output:size(1) do output[i][output:size(2)] = sampled[output:size(2) - 1] end
-    if max_samples == 1 or wmap[output[1][output:size(2)]] == '</S>' then
-        return output
-    else
-        return sample(encoder, decoder, enc_state, output, max_samples - 1)
-    end
-end
-
-function sequence_to_string(seq)
-    local str = ''
-    if seq:dim() == 2 then seq = seq[1] end
-    for i=1, seq:size()[1] do
-        local next_word = helper.n_to_w[seq[i]] == nil and '<UNK2>' or helper.n_to_w[seq[i]]
-        str = str..' '..next_word
-    end
-    return str
-end
-
-function sample(encoder, decoder, enc_state, sequence, max_samples)
-    if max_samples == nil then
-        max_samples = 1
-    end
-    if enc_state == nil then
-        enc_state = encoder:forward(sequence)
-        sequence = torch.CudaTensor({helper.w_to_n['<beg>']}):reshape(1, 1)
-    end
     local cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), 1, enc_state:size(3))
     local addition = torch.zeros(sequence:size(1)):cuda()
     local output = torch.cat(sequence, addition , 2)
