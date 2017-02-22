@@ -121,9 +121,9 @@ end
 
 -- generate some samples
 if opt.generate_samples then
-    output['train_samples'] = generate_samples(train_set, opt.num_samples)
-    output['valid_samples'] = generate_samples(valid_set, opt.num_samples)
-    output['test_samples'] = generate_samples(test_set, opt.num_samples)
+    output['train_samples'] = generate_samples(train_enc_inputs, train_outputs, opt.num_samples, opt.max_sample_length)
+    output['valid_samples'] = generate_samples(valid_enc_inputs, valid_outputs, opt.num_samples, opt.max_sample_length)
+    output['test_samples'] = generate_samples(test_enc_inputs, test_outputs, opt.num_samples, opt.max_sample_length)
 end
 
 output['architecture'] = {}

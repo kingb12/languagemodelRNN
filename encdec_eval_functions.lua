@@ -69,7 +69,8 @@ function sequence_to_string(seq)
     return str
 end
 
-function generate_samples(data_set, outputs, num_samples)
+function generate_samples(data_set, outputs, num_samples, max_sample_length)
+    if max_sample_length == nil then max_sample_length = 10 end
     local results = {}
     print('Generating Samples...')
     for i = 1, num_samples do
@@ -83,7 +84,7 @@ function generate_samples(data_set, outputs, num_samples)
         x = x:reshape(1, x:size(1))
         local result = {}
         result['encoder_input'] = sequence_to_string(x)
-        result['generated'] = sequence_to_string(sample(enc, dec, nil, x, opt.max_sample_length))
+        result['generated'] = sequence_to_string(sample(enc, dec, nil, x, max_sample_length))
         result['gold'] = sequence_to_string(outputs[t_set_idx][example_no])
         results[#results + 1] = result
     end
