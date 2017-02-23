@@ -1,0 +1,1 @@
+{"architecture":{"decoder":"nn.gModule","encoder":"nn.Sequential {\n  [input -> (1) -> (2) -> output]\n  (1): nn.LookupTable\n  (2): nn.LSTM(200 -> 512)\n}"}}
