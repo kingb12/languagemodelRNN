@@ -81,6 +81,7 @@ cmd:option('-gpu', false)
 local opt = cmd:parse(arg)
 local tensorType = 'torch.FloatTensor'
 local learningRate = opt.learning_rate
+local dropout = opt.dropout > 0.0
 
 -- Choosing between GPU/CPU Mode
 if opt.gpu then
@@ -130,7 +131,7 @@ if opt.init_enc_from == '' then
         end
         enc._rnns[#enc._rnns + 1] = lstm
         enc:add(lstm)
-        if dropout then lm:add(nn.Dropout(opt.dropout)) end
+        if dropout then enc:add(nn.Dropout(opt.dropout)) end
     end
     
     
