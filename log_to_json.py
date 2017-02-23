@@ -33,11 +33,9 @@ v_perps= []
 e_c = 0
 for i, log_file in enumerate(sys.argv[2:]):
     e, lo, lr, t_p, vlo, v_p = read_log(log_file)
-    old = 0
     t_px = []
     for t in t_p:
-        t_px.append(t - old)
-        old = t
+        t_px.append(t)
     epochs.extend([n + (e_c) for n in e])
     e_c += len(e)
     losses.extend(lo)
