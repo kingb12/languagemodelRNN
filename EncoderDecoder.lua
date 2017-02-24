@@ -171,13 +171,11 @@ if opt.init_dec_from == '' then
         dec_rnns[#dec_rnns + 1] = lstm
         if opt.dropout > 0.0 then 
             drop = nn.Dropout(opt.dropout)(previous)
-            print("ading dropout to dec")
             previous = drop
         end
     end
     -- now linear transition layers
     local dec_v1 = nn.View(-1, opt.hidden_size)(previous)
-    print(previous == drop)
     local dec_lin = nn.Linear(opt.hidden_size, vocab_size)(dec_v1)
 
     -- now combine them into a graph module
@@ -361,6 +359,8 @@ function get_validation_loss(venc_inputs, vdec_inputs, voutputs, vin_lengths, vo
     enc:evaluate()
     dec:evaluate()
     local v_perp, v_loss = perplexity_over_dataset(enc, dec, venc_inputs, vdec_inputs, vin_lengths, vout_lengths, voutputs)
+    enc:training()
+    dec:training()
     return v_loss, v_perp
 end
 

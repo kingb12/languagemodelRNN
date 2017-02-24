@@ -281,7 +281,7 @@ function combine_all_parameters(...)
                     flatUsedParameters[counter] = flatParameters[counter+cumSumOfHoles[k]]
                 end
             end
-            assert (counter == nUsedParameters)
+            -- assert (counter == nUsedParameters)
         end
         return flatUsedParameters
     end
