@@ -153,7 +153,7 @@ if opt.init_dec_from == '' then
     dec_rnns = {}
 
     -- Hidden Layers: N LSTM layers, stacked, with optional dropout. previous helps us form a linear graph with these
-    local previous
+    local previous, drop
     for i=1,opt.num_dec_layers do
         local lstm, lstm_n
         if i == 1 then
@@ -170,12 +170,14 @@ if opt.init_dec_from == '' then
         end
         dec_rnns[#dec_rnns + 1] = lstm
         if opt.dropout > 0.0 then 
-            local drop = nn.Dropout(opt.dropout)(previous)
+            drop = nn.Dropout(opt.dropout)(previous)
+            print("ading dropout to dec")
             previous = drop
         end
     end
     -- now linear transition layers
     local dec_v1 = nn.View(-1, opt.hidden_size)(previous)
+    print(previous == drop)
     local dec_lin = nn.Linear(opt.hidden_size, vocab_size)(dec_v1)
 
     -- now combine them into a graph module
