@@ -57,7 +57,7 @@ cmd:option('-weights', '')
 cmd:option('-no_average_loss', false)
 cmd:option('-enc_remember_states', false)
 cmd:option('-dec_remember_states', false)
-
+cmd:option('-bag_of_words', '', 'encoder is replaced with a bag of words approach')
 -- Optimization options
 cmd:option('-max_epochs', 50)
 cmd:option('-learning_rate', 0.1)
@@ -138,8 +138,17 @@ if opt.init_enc_from == '' then
 else
     -- load a model from a th7 file
     enc = torch.load(opt.init_enc_from)
-
 end
+
+if opt.bag_of_words ~= '' then
+    local lookup = torch.load(opt.bag_of_words)
+    enc = nn.Sequential()
+    enc:add(lookup)
+    enc:add(nn.Mean(2))
+    enc:add(nn.Linear(opt.wordvec_size, opt.hidden_size))
+    enc:add(nn.Replicate(opt.max_in_length, 2))
+end
+
 
 -- ***** DECODER *****
 
