@@ -148,6 +148,7 @@ if opt.bag_of_words ~= '' then
     enc:add(nn.Linear(opt.wordvec_size, opt.hidden_size))
     enc:add(nn.Replicate(opt.max_in_len, 2))
     enc._rnns = {}
+    dec_lu = lookup:clone('weight', 'gradWeight')
 end
 
 
