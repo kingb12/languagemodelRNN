@@ -146,7 +146,8 @@ if opt.bag_of_words ~= '' then
     enc:add(lookup)
     enc:add(nn.Mean(2))
     enc:add(nn.Linear(opt.wordvec_size, opt.hidden_size))
-    enc:add(nn.Replicate(opt.max_in_length, 2))
+    enc:add(nn.Replicate(opt.max_in_len, 2))
+    enc._rnns = {}
 end
 
 
