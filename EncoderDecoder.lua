@@ -58,6 +58,8 @@ cmd:option('-no_average_loss', false)
 cmd:option('-enc_remember_states', false)
 cmd:option('-dec_remember_states', false)
 cmd:option('-bag_of_words', '', 'encoder is replaced with a bag of words approach')
+cmd:option('-bow_no_linear', false, 'only meaningful in bag_of_words context. no linear projection to hidden size, all are wordvec_size')
+
 -- Optimization options
 cmd:option('-max_epochs', 50)
 cmd:option('-learning_rate', 0.1)
@@ -145,7 +147,9 @@ if opt.bag_of_words ~= '' then
     enc = nn.Sequential()
     enc:add(lookup)
     enc:add(nn.Mean(2))
-    enc:add(nn.Linear(opt.wordvec_size, opt.hidden_size))
+    if not opt.bow_no_linear then
+        enc:add(nn.Linear(opt.wordvec_size, opt.hidden_size))
+    end
     enc:add(nn.Replicate(opt.max_in_len, 2))
     enc._rnns = {}
     dec_lu = lookup:clone('weight', 'gradWeight')
@@ -168,11 +172,19 @@ if opt.init_dec_from == '' then
     for i=1,opt.num_dec_layers do
         local lstm, lstm_n
         if i == 1 then
-            lstm = nn.LSTM(opt.wordvec_size, opt.hidden_size)
+            if opt.bag_of_words ~= '' and opt.bow_no_linear then
+                lstm = nn.LSTM(opt.wordvec_size, opt.wordvec_size)
+            else
+                lstm = nn.LSTM(opt.wordvec_size, opt.hidden_size)
+            end
             lstm_n = lstm({dec_c0, dec_h0, dec_lu})
             previous = lstm_n
         else
-            lstm = nn.LSTM(opt.hidden_size, opt.hidden_size)
+            if opt.bag_of_words ~= '' and opt.bow_no_linear then
+                lstm = nn.LSTM(opt.wordvec_size, opt.wordvec_size)
+            else
+                lstm = nn.LSTM(opt.hidden_size, opt.hidden_size)
+            end
             lstm_n = lstm(previous)
             previous = lstm_n
         end
