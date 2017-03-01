@@ -149,6 +149,8 @@ if opt.bag_of_words ~= '' then
     enc:add(nn.Mean(2))
     if not opt.bow_no_linear then
         enc:add(nn.Linear(opt.wordvec_size, opt.hidden_size))
+    else
+	opt.hidden_size = opt.wordvec_size
     end
     enc:add(nn.Replicate(opt.max_in_len, 2))
     enc._rnns = {}
@@ -198,8 +200,14 @@ if opt.init_dec_from == '' then
         end
     end
     -- now linear transition layers
-    local dec_v1 = nn.View(-1, opt.hidden_size)(previous)
-    local dec_lin = nn.Linear(opt.hidden_size, vocab_size)(dec_v1)
+    local dec_v1, dec_lin
+    if opt.bow_no_linear and opt.bag_of_words ~= '' then
+        dec_v1 = nn.View(-1, opt.wordvec_size)(previous)
+        dec_lin = nn.Linear(opt.wordvec_size, vocab_size)(dec_v1)
+    else
+        dec_v1 = nn.View(-1, opt.hidden_size)(previous)
+        dec_lin = nn.Linear(opt.hidden_size, vocab_size)(dec_v1)
+    end
 
     -- now combine them into a graph module
     dec = nn.gModule({dec_c0, dec_h0, dec_lu}, {dec_lin}) -- {inputs}, {outputs}
@@ -216,7 +224,12 @@ end
 -- We'll use TemporalCrossEntropyCriterion to maximize the likelihood for correct words, ignoring 0 which indicates padding.
 
 criterion = nn.TemporalCrossEntropyCriterion()
-local cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.hidden_size)
+local cb
+if opt.bag_of_words ~= '' and opt.bow_no_linear then
+    cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.wordvec_size)
+else
+    cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.hidden_size)
+end
 local hzeros = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.max_in_len-1, opt.hidden_size)
 
 -- logging
