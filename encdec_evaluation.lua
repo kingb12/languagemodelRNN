@@ -29,6 +29,7 @@ torch.setheaptracking(true)
 local cmd = torch.CmdLine()
 -- Options
 cmd:option('-calculate_perplexity', false)
+cmd:option('-calculate_bleu', false)
 cmd:option('-generate_samples', false)
 
 
@@ -124,6 +125,24 @@ if opt.generate_samples then
     output['train_samples'] = generate_samples(train_enc_inputs, train_outputs, opt.num_samples, opt.max_sample_length)
     output['valid_samples'] = generate_samples(valid_enc_inputs, valid_outputs, opt.num_samples, opt.max_sample_length)
     output['test_samples'] = generate_samples(test_enc_inputs, test_outputs, opt.num_samples, opt.max_sample_length)
+end
+
+if opt.generate_samples and opt.calculate_bleu then
+    local references = {}
+    local candidates = {}
+    for i=1,#output['train_samples'] do
+        candidates[#candidates + 1] = output['train_samples'][i]['generated']
+        references[#references + 1] = output['train_samples'][i]['gold']
+    end
+    for i=1,#output['valid_samples'] do
+        candidates[#candidates + 1] = output['valid_samples'][i]['generated']
+        references[#references + 1] = output['valid_samples'][i]['gold']
+    end
+    for i=1,#output['test_samples'] do
+        candidates[#candidates + 1] = output['test_samples'][i]['generated']
+        references[#references + 1] = output['test_samples'][i]['gold']
+    end
+    output['bleu'] = calculate_bleu(references, candidates)
 end
 
 output['architecture'] = {}

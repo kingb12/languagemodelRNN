@@ -27,6 +27,7 @@ cmd:option('-gpu', false)
 cmd:option('-calculate_losses', false)
 cmd:option('-calculate_perplexity', false)
 cmd:option('-generate_samples', false)
+cmd:option('-calculate_bleu', false)
 
 
 -- Dataset options
@@ -235,6 +236,24 @@ if opt.generate_samples then
     output['train_samples'] = generate_samples(train_set, opt.num_samples)
     output['valid_samples'] = generate_samples(valid_set, opt.num_samples)
     output['test_samples'] = generate_samples(test_set, opt.num_samples)
+end
+
+if opt.calculate_bleu then
+    local references = {}
+    local candidates = {}
+    for i=1,#output['train_samples'] do
+        candidates[#candidates + 1] = output['train_samples'][i]['generated']
+        references[#references + 1] = output['train_samples'][i]['gold']
+    end
+    for i=1,#output['valid_samples'] do
+        candidates[#candidates + 1] = output['valid_samples'][i]['generated']
+        references[#references + 1] = output['valid_samples'][i]['gold']
+    end
+    for i=1,#output['test_samples'] do
+        candidates[#candidates + 1] = output['test_samples'][i]['generated']
+        references[#references + 1] = output['test_samples'][i]['gold']
+    end
+    output['bleu'] = calculate_bleu(references, candidates)
 end
 
 if opt.out ~= '' then

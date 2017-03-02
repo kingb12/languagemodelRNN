@@ -6,6 +6,8 @@
 -- To change this template use File | Settings | File Templates.
 --
 
+cjson = require 'cjson'
+
 function sample(encoder, decoder, enc_state, sequence, max_samples)
     if max_samples == nil then
         max_samples = 1
@@ -84,3 +86,28 @@ function perplexity_over_dataset(enc, dec, enc_inputs, dec_inputs, in_lengths, o
     return data_perplexity, data_loss
 end
 
+function cmdout (cmd)
+   local f = io.popen(cmd)
+   local lout = f:read("*a")
+   f:close()
+   return lout
+end
+
+function calculate_bleu(references, candidates)
+   if reference == nil then reference = 'reference.txt' end
+   if candidate == nil then candidate = 'candidate.txt' end
+    local io = require 'io'
+    local f = io.open(reference, 'w+')
+    for i=1, #references do
+        f:write(references[i] .. '\n')
+    end
+    f:close()
+    local f = io.open(candidate, 'w+')
+    for i=1, #candidates do
+        f:write(candidates[i] .. '\n')
+    end
+    f:close()
+    local cmd = 'perl multi-bleu.perl ' .. reference ..' < ' .. candidate .. ' | python parse_bleu.py'
+    local s = cmdout(cmd)
+    return cjson.decode(s)
+end
