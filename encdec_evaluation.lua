@@ -31,6 +31,10 @@ local cmd = torch.CmdLine()
 cmd:option('-calculate_perplexity', false)
 cmd:option('-calculate_bleu', false)
 cmd:option('-generate_samples', false)
+cmd:option('-calculate_avg_alignment', false)
+cmd:option('-calculate_n_pairs_bleu', false)
+
+
 
 
 -- Dataset options
@@ -127,9 +131,9 @@ if opt.generate_samples then
     output['test_samples'] = generate_samples(test_enc_inputs, test_outputs, opt.num_samples, opt.max_sample_length)
 end
 
-if opt.generate_samples and opt.calculate_bleu then
-    local references = {}
-    local candidates = {}
+if opt.generate_samples and (opt.calculate_bleu or opt.calculate_n_pairs_bleu or opt.calculate_avg_alignment) then
+    references = {}
+    candidates = {}
     for i=1,#output['train_samples'] do
         candidates[#candidates + 1] = output['train_samples'][i]['generated']
         references[#references + 1] = output['train_samples'][i]['gold']
@@ -143,6 +147,18 @@ if opt.generate_samples and opt.calculate_bleu then
         references[#references + 1] = output['test_samples'][i]['gold']
     end
     output['bleu'] = calculate_bleu(references, candidates)
+end
+
+if opt.calculate_n_pairs_bleu then
+    print("N pairs BLEU...")
+    output['n_pairs_bleu_generated'] = n_pairs_bleu(candidates, 1000)
+    output['n_pairs_bleu_gold'] = n_pairs_bleu(references, 1000)
+end
+
+if opt.calculate_avg_alignment then
+    print("Average alignment...")
+    output['average_alignment_generated'] = alignment_scores(candidates)
+    output['average_alignment_gold'] = alignment_scores(references)
 end
 
 output['architecture'] = {}

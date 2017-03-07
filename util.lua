@@ -293,3 +293,15 @@ function combine_all_parameters(...)
     -- return new flat vector that contains all discrete parameters
     return flatParameters, flatGradParameters
 end
+
+function no_ingredients(seq)
+    local new_seq = torch.CudaTensor(seq:size(1)); local x;
+    for i=1, seq:size(1) do
+        new_seq[i] = helper.w_to_n['<pad>']
+        if seq[i] == helper.w_to_n['<begin_ingredients>'] then x = i end
+    end
+    for i=1, x-1 do
+        new_seq[new_seq:size(1) + 1 - i] = seq[x - i]
+    end
+    return new_seq
+end

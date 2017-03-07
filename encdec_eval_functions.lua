@@ -111,3 +111,31 @@ function calculate_bleu(references, candidates)
     local s = cmdout(cmd)
     return cjson.decode(s)
 end
+
+function n_pairs_bleu(generations, n)
+    local refs = {}
+    local cands = {}
+    for i=1, n do
+        local i = (torch.random() % #generations) + 1
+        local j = (torch.random() % #generations) + 1
+        while i == j and #generations > 1 do
+            j = (torch.random() % #generations) + 1
+        end
+        refs[#refs + 1] = generations[i]
+        cands[#cands + 1] = generations[j]
+    end
+    return calculate_bleu(refs, cands)
+end
+
+function alignment_scores(sequences)
+    local cmd = 'python alignment.py ' .. '\'' .. cjson.encode(sequences) .. '\''
+    local s = cmdout(cmd)
+    local t = cjson.decode(s)
+    local data = torch.DoubleTensor(t)
+    local avg_alignment_score = 0; local count = 0
+    for i=1, #sequences - 1 do for j=i + 1, #sequences do
+        avg_alignment_score = avg_alignment_score + data[i][j]; count = count + 1
+    end end
+    avg_alignment_score = avg_alignment_score / count
+    return avg_alignment_score
+end
