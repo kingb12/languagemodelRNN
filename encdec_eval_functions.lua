@@ -121,14 +121,15 @@ function n_pairs_bleu(generations, n)
         while i == j and #generations > 1 do
             j = (torch.random() % #generations) + 1
         end
-        refs[#refs + 1] = generations[i]
-        cands[#cands + 1] = generations[j]
+        refs[#refs + 1] = generations[i]:gsub('\'', '\\\'')
+        cands[#cands + 1] = generations[j]:gsub('\'', '\\\'')
+
     end
     return calculate_bleu(refs, cands)
 end
 
 function alignment_scores(sequences)
-    local cmd = 'python alignment.py ' .. '\'' .. cjson.encode(sequences) .. '\''
+    local cmd = 'python alignment.py ' .. '\'' .. cjson.encode(sequences):gsub('\'', '') .. '\''
     local s = cmdout(cmd)
     local t = cjson.decode(s)
     local data = torch.DoubleTensor(t)

@@ -21,6 +21,7 @@ require 'LSTM'
 require 'TemporalCrossEntropyCriterion'
 require 'encdec_eval_functions'
 cjson = require 'cjson'
+io = require 'io'
 
 -- =========================================== COMMAND LINE OPTIONS ====================================================
 
@@ -98,7 +99,7 @@ end
 
 --save inintialization
 if opt.save_model_at_epoch then
-    local f = io.open(opt.save_prefix..'_cmd.json')
+    local f = io.open(opt.save_prefix..'_cmd.json', 'w+')
     f:write(cjson.encode(opt))
     f:close()
 end
