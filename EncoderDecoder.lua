@@ -20,6 +20,7 @@ require 'optim'
 require 'LSTM'
 require 'TemporalCrossEntropyCriterion'
 require 'encdec_eval_functions'
+cjson = require 'cjson'
 
 -- =========================================== COMMAND LINE OPTIONS ====================================================
 
@@ -93,6 +94,13 @@ if opt.gpu then
 end
 
 -- ============================================= DATA ==================================================================
+
+--save inintialization
+if opt.save_model_at_epoch then
+    local f = io.open(opt.save_prefix..'_cmd.json')
+    f:write(cjson.encode(opt))
+    f:close()
+end
 
 -- loaded from saved torch files
 enc_inputs = torch.load(opt.enc_inputs) -- title <begin> ingredients
