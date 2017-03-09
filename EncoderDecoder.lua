@@ -52,6 +52,7 @@ cmd:option('-init_dec_from', '')
 cmd:option('-wordvec_size', 100)
 cmd:option('-hidden_size', 512)
 cmd:option('-dropout', 0)
+cmd:option('-dropout_loc', 'after')
 cmd:option('-num_enc_layers', 1)
 cmd:option('-num_dec_layers', 1)
 cmd:option('-weights', '')
@@ -140,8 +141,9 @@ if opt.init_enc_from == '' then
             lstm.remember_states = true
         end
         enc._rnns[#enc._rnns + 1] = lstm
+        if dropout and (opt.dropout_loc == 'before' or opt.dropout_loc == 'both') then enc:add(nn.Dropout(opt.dropout)) end
         enc:add(lstm)
-        if dropout then enc:add(nn.Dropout(opt.dropout)) end
+        if dropout and (opt.dropout_loc == 'after' or opt.dropout_loc == 'both') then enc:add(nn.Dropout(opt.dropout)) end
     end
     
     
@@ -179,15 +181,21 @@ if opt.init_dec_from == '' then
 
     -- Hidden Layers: N LSTM layers, stacked, with optional dropout. previous helps us form a linear graph with these
     local previous, drop
+    previous = {dec_c0, dec_h0, dec_lu}
     for i=1,opt.num_dec_layers do
         local lstm, lstm_n
+        if opt.dropout > 0.0 and (opt.dropout_loc == 'before' or opt.dropout_loc == 'both') then
+            drop = nn.Dropout(opt.dropout)(previous)
+            previous = drop
+        end
         if i == 1 then
+
             if opt.bag_of_words ~= '' and opt.bow_no_linear then
                 lstm = nn.LSTM(opt.wordvec_size, opt.wordvec_size)
             else
                 lstm = nn.LSTM(opt.wordvec_size, opt.hidden_size)
             end
-            lstm_n = lstm({dec_c0, dec_h0, dec_lu})
+            lstm_n = lstm(previous)
             previous = lstm_n
         else
             if opt.bag_of_words ~= '' and opt.bow_no_linear then
@@ -202,7 +210,7 @@ if opt.init_dec_from == '' then
             lstm.remember_states = true
         end
         dec_rnns[#dec_rnns + 1] = lstm
-        if opt.dropout > 0.0 then 
+        if opt.dropout > 0.0 and (opt.dropout_loc == 'after' or opt.dropout_loc == 'both') then
             drop = nn.Dropout(opt.dropout)(previous)
             previous = drop
         end
