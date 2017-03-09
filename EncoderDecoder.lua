@@ -186,8 +186,17 @@ if opt.init_dec_from == '' then
     for i=1,opt.num_dec_layers do
         local lstm, lstm_n
         if opt.dropout > 0.0 and (opt.dropout_loc == 'before' or opt.dropout_loc == 'both') then
-            drop = nn.Dropout(opt.dropout)(previous)
-            previous = drop
+            if i == 1 then
+                local drop = nn.ParrallelTable()
+                drop:add(nn.Dropout(opt.dropout))
+                drop:add(nn.Dropout(opt.dropout))
+                drop:add(nn.Dropout(opt.dropout))
+                local drop_n = drop(previous)
+                previous = drop_n
+            else
+                drop = nn.Dropout(opt.dropout)(previous)
+                previous = drop
+            end
         end
         if i == 1 then
 
