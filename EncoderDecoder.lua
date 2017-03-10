@@ -187,7 +187,7 @@ if opt.init_dec_from == '' then
         local lstm, lstm_n
         if opt.dropout > 0.0 and (opt.dropout_loc == 'before' or opt.dropout_loc == 'both') then
             if i == 1 then
-                local drop = nn.ParrallelTable()
+                local drop = nn.ParallelTable()
                 drop:add(nn.Dropout(opt.dropout))
                 drop:add(nn.Dropout(opt.dropout))
                 drop:add(nn.Dropout(opt.dropout))

@@ -2,12 +2,12 @@
 
 # meta options
 save_dir='/scratch/kingb12/' 
-model_name='testmodel'
+model_name='encdec_noing15_bow_200_512_04drb'
 # common adjustments
-max_epochs=1
+max_epochs=200
 learning_rate=0.0001
-num_samples=10
-max_sample_length=10
+num_samples=7
+max_sample_length=25
 ##################################################### Model Run Options #############################################
 # Dataset options
 enc_inputs='../data/rl_no_ing_15.th7'
@@ -37,10 +37,10 @@ batch_size=4
 
 init_enc_from=''
 init_dec_from=''
-wordvec_size=100
+wordvec_size=200
 hidden_size=512
-dropout=0
-dropout_loc='after'
+dropout=0.4
+dropout_loc='both'
 num_enc_layers=1
 num_dec_layers=1
 weights=''
@@ -53,59 +53,18 @@ save_prefix=$save_dir$model_name'/'$model_name
 backup_save_dir=''
 print_acc_every=0
 print_examples_every=0
-valid_loss_every=0
+valid_loss_every=1
 
 ######################################################### Evaluation Options ##############################################
 
 max_gen_example_length=10
-out=$save_prefix'/'$model_name'.json'
+out=$save_prefix'.json'
 
 ######################################################## Actually Running #################################################
 
+cd ..
 mkdir $save_dir'/'$model_name
 
-th EncoderDecoder.lua \
--dropout_loc $dropout_loc \
--enc_inputs $enc_inputs \
--dec_inputs $dec_inputs \
--outputs $outputs \
--in_lengths $in_lengths \
--out_lengths $out_lengths \
--helper $helper \
--valid_enc_inputs $valid_enc_inputs \
--valid_dec_inputs $valid_dec_inputs \
--valid_outputs $valid_outputs \
--valid_in_lengths $valid_in_lengths \
--valid_out_lengths $valid_out_lengths \
--max_in_len $max_in_len \
--max_out_len $max_out_len \
--min_out_len $min_out_len \
--min_in_len $min_in_len \
--batch_size $batch_size \
--wordvec_size $wordvec_size \
--hidden_size $hidden_size \
--dropout $dropout \
--num_enc_layers $num_enc_layers \
--num_dec_layers $num_dec_layers \
--weights $weights \
--no_average_loss $no_average_loss \
--enc_remember_states $enc_remember_states \
--dec_remember_states $dec_remember_states \
--max_epochs $max_epochs \
--learning_rate $learning_rate \
--lr_decay $lr_decay \
--algorithm $algorithm \
--print_loss_every $print_loss_every \
--save_model_at_epoch \
--save_prefix $save_prefix \
--backup_save_dir $backup_save_dir \
--run $run \
--print_acc_every $print_acc_every \
--print_examples_every $print_examples_every \
--valid_loss_every $valid_loss_every \
--run  \
--gpu \
-&& \
 th encdec_evaluation.lua \
 -train_enc_inputs $enc_inputs \
 -train_dec_inputs $dec_inputs \
