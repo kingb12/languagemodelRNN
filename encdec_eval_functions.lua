@@ -128,21 +128,23 @@ function n_pairs_bleu(generations, n)
     return calculate_bleu(refs, cands)
 end
 
-function closest_bleu_match(references, sample)
-    local best_score = 0
-    local best_match = ''
+function closest_bleu_match(references, samples, ref_file, sample_file)
+    if ref_file == nil then ref_file = 'ref_file.txt' end
+    if sample_file == nil then sample_file = 'sample_file.txt' end
+    local io = require 'io'
+    local f = io.open(ref_file, 'w+')
     for i=1, #references do
-        -- literally writing a file for each reference, so definitely room for performance improvement here
-        local scores = calculate_bleu({references[i]}, {sample})
-        if scores['score'] > best_score then
-            best_score = scores['score']
-            best_match = references[i]
-        end
-        if scores['score'] == 100 then
-            break
-        end
+        f:write(references[i] .. '\n')
     end
-    return best_match, best_score
+    f:close()
+    local f = io.open(sample_file, 'w+')
+    for i=1, #samples do
+        f:write(samples[i] .. '\n')
+    end
+    f:close()
+    local cmd = 'python clostest_bleu_match ' .. sample_file ..' ' .. ref_file
+    local s = cmdout(cmd)
+    return cjson.decode(s)
 end
 
 function alignment_scores(sequences)
