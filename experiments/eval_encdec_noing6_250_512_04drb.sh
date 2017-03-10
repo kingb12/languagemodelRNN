@@ -63,7 +63,6 @@ out=$save_prefix'.json'
 ######################################################## Actually Running #################################################
 
 cd ..
-mkdir $save_dir'/'$model_name
 
 th encdec_evaluation.lua \
 -train_enc_inputs $enc_inputs \

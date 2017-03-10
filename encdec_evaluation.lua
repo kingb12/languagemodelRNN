@@ -134,30 +134,51 @@ end
 if opt.generate_samples and (opt.calculate_bleu or opt.calculate_n_pairs_bleu or opt.calculate_avg_alignment) then
     references = {}
     candidates = {}
+    tr_references = {}
+    tr_candidates = {}
+    v_references = {}
+    v_candidates = {}
+    ts_references = {}
+    ts_candidates = {}
     for i=1,#output['train_samples'] do
+        tr_candidates[#tr_candidates + 1] = output['train_samples'][i]['generated']
+        tr_references[#tr_references + 1] = output['train_samples'][i]['gold']
         candidates[#candidates + 1] = output['train_samples'][i]['generated']
         references[#references + 1] = output['train_samples'][i]['gold']
     end
     for i=1,#output['valid_samples'] do
+        v_candidates[#v_candidates + 1] = output['valid_samples'][i]['generated']
+        v_references[#v_references + 1] = output['valid_samples'][i]['gold']
         candidates[#candidates + 1] = output['valid_samples'][i]['generated']
         references[#references + 1] = output['valid_samples'][i]['gold']
     end
     for i=1,#output['test_samples'] do
+        ts_candidates[#ts_candidates + 1] = output['test_samples'][i]['generated']
+        ts_references[#ts_references + 1] = output['test_samples'][i]['gold']
         candidates[#candidates + 1] = output['test_samples'][i]['generated']
         references[#references + 1] = output['test_samples'][i]['gold']
     end
-    output['bleu'] = calculate_bleu(references, candidates)
+    output['train_bleu'] = calculate_bleu(references, candidates)
+    output['valid_bleu'] = calculate_bleu(references, candidates)
+    output['test_bleu'] = calculate_bleu(references, candidates)
+    output['combined_bleu'] = calculate_bleu(references, candidates)
 end
 
 if opt.calculate_n_pairs_bleu then
     print("N pairs BLEU...")
-    output['n_pairs_bleu_generated'] = n_pairs_bleu(candidates, 1000)
+    output['n_pairs_bleu_train'] = n_pairs_bleu(tr_candidates, 1000)
+    output['n_pairs_bleu_valid'] = n_pairs_bleu(v_candidates, 1000)
+    output['n_pairs_bleu_test'] = n_pairs_bleu(ts_candidates, 1000)
+    output['n_pairs_bleu_all'] = n_pairs_bleu(candidates, 1000)
     output['n_pairs_bleu_gold'] = n_pairs_bleu(references, 1000)
 end
 
 if opt.calculate_avg_alignment then
     print("Average alignment...")
-    output['average_alignment_generated'] = alignment_scores(candidates)
+    output['average_alignment_train'] = alignment_scores(tr_candidates)
+    output['average_alignment_valid'] = alignment_scores(v_candidates)
+    output['average_alignment_test'] = alignment_scores(ts_candidates)
+    output['average_alignment_all'] = alignment_scores(candidates)
     output['average_alignment_gold'] = alignment_scores(references)
 end
 

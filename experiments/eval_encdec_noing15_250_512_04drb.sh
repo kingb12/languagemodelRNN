@@ -2,7 +2,7 @@
 
 # meta options
 save_dir='/scratch/kingb12/' 
-model_name='encdec_noing15_bow_200_512_04drb'
+model_name='encdec_noing15_200_512_04drb'
 # common adjustments
 max_epochs=200
 learning_rate=0.0001
@@ -106,7 +106,6 @@ th EncoderDecoder.lua \
 -valid_loss_every $valid_loss_every \
 -run  \
 -gpu \
--bag_of_words '/scratch/kingb12/encdec_lookup_200.th7' \
 && \
 th encdec_evaluation.lua \
 -train_enc_inputs $enc_inputs \
