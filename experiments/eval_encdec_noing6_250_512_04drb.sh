@@ -86,5 +86,5 @@ th encdec_evaluation.lua \
 -test_out_lengths $test_out_lengths \
 -num_samples $num_samples \
 -max_sample_length $max_sample_length \
--calculate_bleu -calculate_avg_alignment -calculate_n_pairs_bleu \
+-calculate_best_bleu_match  \
 -out $out

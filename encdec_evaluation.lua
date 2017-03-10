@@ -205,7 +205,7 @@ if opt.calculate_best_bleu_match then
     end
     local function get_best_matches(refs, gens)
         local result = {}
-        for i=1, gens do
+        for i=1, #gens do
             local r = {}
             local best_match, best_score = closest_bleu_match(refs, gens[i])
             r['best_match'] = best_match
@@ -214,9 +214,12 @@ if opt.calculate_best_bleu_match then
         end
         return result
     end
-    output['best_bleu_matches_train'] = get_best_matches(full_train_set, extract_generations(output['train_samples']))
-    output['best_bleu_matches_valid'] = get_best_matches(full_train_set, extract_generations(output['valid_samples']))
-    output['best_bleu_matches_test'] = get_best_matches(full_train_set, extract_generations(output['test_samples']))
+    print("    Train....")
+    output['best_bleu_matches_train'] = closest_bleu_match(full_train_set, extract_generations(output['train_samples']))
+    print("    Valid....")
+    output['best_bleu_matches_valid'] = closest_bleu_match(full_train_set, extract_generations(output['valid_samples']))
+    print("    Test....")
+    output['best_bleu_matches_test'] = closest_bleu_match(full_train_set, extract_generations(output['test_samples']))
 end
 
 output['architecture'] = {}

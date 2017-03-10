@@ -133,16 +133,12 @@ function closest_bleu_match(references, samples, ref_file, sample_file)
     if sample_file == nil then sample_file = 'sample_file.txt' end
     local io = require 'io'
     local f = io.open(ref_file, 'w+')
-    for i=1, #references do
-        f:write(references[i] .. '\n')
-    end
+    f:write(cjson.encode(references))
     f:close()
     local f = io.open(sample_file, 'w+')
-    for i=1, #samples do
-        f:write(samples[i] .. '\n')
-    end
+    f:write(cjson.encode(samples))
     f:close()
-    local cmd = 'python clostest_bleu_match ' .. sample_file ..' ' .. ref_file
+    local cmd = 'python closest_bleu_match.py ' .. sample_file ..' ' .. ref_file
     local s = cmdout(cmd)
     return cjson.decode(s)
 end
