@@ -137,11 +137,12 @@ if opt.generate_samples then
     output['test_samples'] = generate_samples(test_enc_inputs, test_outputs, opt.num_samples, opt.max_sample_length)
 end
 
-if opt.generate_samples and (opt.calculate_bleu or opt.calculate_n_pairs_bleu or opt.calculate_avg_alignment) then
+if opt.calculate_bleu or opt.calculate_n_pairs_bleu or opt.calculate_avg_alignment then
     references = {}
     candidates = {}
     tr_references = {}
     tr_candidates = {}
+    print(tr_candidates)
     v_references = {}
     v_candidates = {}
     ts_references = {}
@@ -165,7 +166,7 @@ if opt.generate_samples and (opt.calculate_bleu or opt.calculate_n_pairs_bleu or
         references[#references + 1] = output['test_samples'][i]['gold']
     end
     output['train_bleu'] = calculate_bleu(tr_references, tr_candidates)
-    output['valid_bleu'] = calculate_bleu(V_references, V_candidates)
+    output['valid_bleu'] = calculate_bleu(v_references, v_candidates)
     output['test_bleu'] = calculate_bleu(ts_references, ts_candidates)
     output['combined_bleu'] = calculate_bleu(references, candidates)
 end

@@ -71,6 +71,7 @@ th encdec_evaluation.lua \
 -train_in_lengths $in_lengths \
 -train_out_lengths $out_lengths \
 -helper $helper \
+-init_output_from $out \
 -enc $save_prefix'_enc.th7' \
 -dec $save_prefix'_dec.th7' \
 -valid_enc_inputs $valid_enc_inputs \
@@ -85,5 +86,5 @@ th encdec_evaluation.lua \
 -test_out_lengths $test_out_lengths \
 -num_samples $num_samples \
 -max_sample_length $max_sample_length \
--calculate_perplexity -generate_samples -calculate_bleu -calculate_avg_alignment -calculate_n_pairs_bleu \
+-calculate_bleu -calculate_avg_alignment -calculate_n_pairs_bleu \
 -out $out
