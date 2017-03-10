@@ -164,9 +164,9 @@ if opt.generate_samples and (opt.calculate_bleu or opt.calculate_n_pairs_bleu or
         candidates[#candidates + 1] = output['test_samples'][i]['generated']
         references[#references + 1] = output['test_samples'][i]['gold']
     end
-    output['train_bleu'] = calculate_bleu(references, candidates)
-    output['valid_bleu'] = calculate_bleu(references, candidates)
-    output['test_bleu'] = calculate_bleu(references, candidates)
+    output['train_bleu'] = calculate_bleu(tr_references, tr_candidates)
+    output['valid_bleu'] = calculate_bleu(V_references, V_candidates)
+    output['test_bleu'] = calculate_bleu(ts_references, ts_candidates)
     output['combined_bleu'] = calculate_bleu(references, candidates)
 end
 
