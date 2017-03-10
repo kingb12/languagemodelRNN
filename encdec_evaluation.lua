@@ -33,6 +33,7 @@ cmd:option('-calculate_bleu', false)
 cmd:option('-generate_samples', false)
 cmd:option('-calculate_avg_alignment', false)
 cmd:option('-calculate_n_pairs_bleu', false)
+cmd:option('-calculate_best_bleu_match', false)
 
 
 
