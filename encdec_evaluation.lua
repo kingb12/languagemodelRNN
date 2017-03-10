@@ -191,8 +191,9 @@ if opt.calculate_avg_alignment then
 end
 
 if opt.calculate_best_bleu_match then
+    print("Best Bleu Matches....")
     local full_train_set = {}
-    for i=1, train_outputs:size(1) do for j=1, train_inputs:size(2) do
+    for i=1, train_outputs:size(1) do for j=1, train_outputs:size(2) do
         full_train_set[#full_train_set + 1] = sequence_to_string(train_outputs[i][j])
     end end
     local function extract_generations(gen_struct)
