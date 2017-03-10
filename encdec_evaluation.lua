@@ -57,6 +57,7 @@ cmd:option('-test_in_lengths', '/homes/iws/kingb12/data/rl_tin_lengths.th7')
 cmd:option('-test_out_lengths', '/homes/iws/kingb12/data/rl_tout_lengths.th7')
 
 cmd:option('-helper', '../data/rl_helper.th7')
+cmd:option('-init_output_from', '', 'useful for updating report without doing intensive things like generating samples')
 
 -- Model options
 cmd:option('-enc', 'enc.th7')
@@ -104,8 +105,13 @@ for k,v in pairs(dec._rnns) do v.remember_states = false end
 criterion = nn.TemporalCrossEntropyCriterion():cuda()
 
 -- We will build a report as a table which will be converted to json.
-output = {}
-
+if opt.init_output_from ~= nil and opt.init_output_from ~= '' then
+    local f = io.open(opt.init_output_from, 'r')
+    output = cjson.decode(f:read())
+    f:close()
+else
+    output = {}
+end
 
 sampler =  nn.Sampler():cuda()
 if opt.no_arg_max then
