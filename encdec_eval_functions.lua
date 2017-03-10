@@ -128,6 +128,23 @@ function n_pairs_bleu(generations, n)
     return calculate_bleu(refs, cands)
 end
 
+function closest_bleu_match(references, sample)
+    local best_score = 0
+    local best_match = ''
+    for i=1, #references do
+        -- literally writing a file for each reference, so definitely room for performance improvement here
+        local scores = calculate_bleu({references[i]}, {sample})
+        if scores['score'] > best_score then
+            best_score = scores['score']
+            best_match = references[i]
+        end
+        if scores['score'] == 100 then
+            break
+        end
+    end
+    return best_match, best_score
+end
+
 function alignment_scores(sequences)
     local cmd = 'python alignment.py ' .. '\'' .. cjson.encode(sequences):gsub('\'', '') .. '\''
     local s = cmdout(cmd)

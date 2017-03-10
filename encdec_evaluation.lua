@@ -189,6 +189,34 @@ if opt.calculate_avg_alignment then
     output['average_alignment_gold'] = alignment_scores(references)
 end
 
+if opt.calculate_best_bleu_match then
+    local full_train_set = {}
+    for i=1, train_outputs:size(1) do for j=1, train_inputs:size(2) do
+        full_train_set[#full_train_set + 1] = sequence_to_string(train_outputs[i][j])
+    end end
+    local function extract_generations(gen_struct)
+        local result = {}
+        for i=1, #gen_struct do
+            result[#result + 1] = gen_struct[i]['generated']
+        end
+        return result
+    end
+    local function get_best_matches(refs, gens)
+        local result = {}
+        for i=1, gens do
+            local r = {}
+            local best_match, best_score = closest_bleu_match(refs, gens[i])
+            r['best_match'] = best_match
+            r['best_score'] = best_score
+            result[#result + 1] = r
+        end
+        return result
+    end
+    output['best_bleu_matches_train'] = get_best_matches(full_train_set, extract_generations(output['train_samples']))
+    output['best_bleu_matches_valid'] = get_best_matches(full_train_set, extract_generations(output['valid_samples']))
+    output['best_bleu_matches_test'] = get_best_matches(full_train_set, extract_generations(output['test_samples']))
+end
+
 output['architecture'] = {}
 output['architecture']['encoder'] = tostring(enc)
 output['architecture']['decoder'] = tostring(dec)
