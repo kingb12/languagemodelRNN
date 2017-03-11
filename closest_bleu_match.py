@@ -19,7 +19,7 @@ def closest_bleu_match(candidates, references):
                 best_match = r
             if score == 1.0:
                 break
-        result.append({'candidate': c, 'best_score': 100*score, 'best_match': best_match})
+        result.append({'candidate': c, 'best_score': 100*best_score, 'best_match': best_match})
     return result
 
 if __name__ == "__main__":
