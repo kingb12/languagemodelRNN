@@ -65,48 +65,6 @@ out=$save_prefix'.json'
 cd ..
 mkdir $save_dir'/'$model_name
 
-th EncoderDecoder.lua \
--dropout_loc $dropout_loc \
--enc_inputs $enc_inputs \
--dec_inputs $dec_inputs \
--outputs $outputs \
--in_lengths $in_lengths \
--out_lengths $out_lengths \
--helper $helper \
--valid_enc_inputs $valid_enc_inputs \
--valid_dec_inputs $valid_dec_inputs \
--valid_outputs $valid_outputs \
--valid_in_lengths $valid_in_lengths \
--valid_out_lengths $valid_out_lengths \
--max_in_len $max_in_len \
--max_out_len $max_out_len \
--min_out_len $min_out_len \
--min_in_len $min_in_len \
--batch_size $batch_size \
--wordvec_size $wordvec_size \
--hidden_size $hidden_size \
--dropout $dropout \
--num_enc_layers $num_enc_layers \
--num_dec_layers $num_dec_layers \
--weights $weights \
--no_average_loss $no_average_loss \
--enc_remember_states $enc_remember_states \
--dec_remember_states $dec_remember_states \
--max_epochs $max_epochs \
--learning_rate $learning_rate \
--lr_decay $lr_decay \
--algorithm $algorithm \
--print_loss_every $print_loss_every \
--save_model_at_epoch \
--save_prefix $save_prefix \
--backup_save_dir $backup_save_dir \
--run $run \
--print_acc_every $print_acc_every \
--print_examples_every $print_examples_every \
--valid_loss_every $valid_loss_every \
--run  \
--gpu \
-&& \
 th encdec_evaluation.lua \
 -train_enc_inputs $enc_inputs \
 -train_dec_inputs $dec_inputs \
@@ -114,6 +72,7 @@ th encdec_evaluation.lua \
 -train_in_lengths $in_lengths \
 -train_out_lengths $out_lengths \
 -helper $helper \
+-init_output_from $out \
 -enc $save_prefix'_enc.th7' \
 -dec $save_prefix'_dec.th7' \
 -valid_enc_inputs $valid_enc_inputs \
@@ -128,5 +87,6 @@ th encdec_evaluation.lua \
 -test_out_lengths $test_out_lengths \
 -num_samples $num_samples \
 -max_sample_length $max_sample_length \
--calculate_perplexity -generate_samples -calculate_bleu -calculate_avg_alignment -calculate_n_pairs_bleu \
+-calculate_bleu -calculate_avg_alignment -calculate_n_pairs_bleu \
+-calculate_best_bleu_match  \
 -out $out
