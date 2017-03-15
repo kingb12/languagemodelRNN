@@ -46,6 +46,7 @@ cmd:option('-max_out_len', 300, 'max decoder sequence length')
 cmd:option('-min_out_len', 1, 'min encoder sequence length')
 cmd:option('-min_in_len', 1, 'min decoder sequence length')
 cmd:option('-batch_size', 4)
+cmd:option('-stop_criteria_num_epochs', 0, 'cutoff for number of epochs of increaseing valid loss after which to stop')
 
 -- Model options
 cmd:option('-init_enc_from', '')
@@ -278,7 +279,8 @@ local epoch = 0
 local embs
 local loss_this_epoch = 0
 local perp_this_epoch = 0
-local v_loss, v_perp
+local v_loss, v_perp, prev_v_loss, num_increasing_v_loss
+num_increasing_v_loss = 0
 
 local function print_info(learningRate, iteration, currentError, v_loss, v_perp, t_perp)
     print("Current Iteration: ", iteration)
@@ -353,9 +355,20 @@ function train_model()
         -- print info
         if (batch == 1) then
             if (epoch % opt.valid_loss_every == 0) then
+                prev_v_loss = v_loss
                 v_loss, v_perp  = get_validation_loss(valid_enc_inputs, valid_dec_inputs, valid_outputs, valid_in_lengths, valid_out_lengths)
+
             end
             print_info(optim_config.learningRate, epoch, loss_this_epoch, v_loss, v_perp, perp_this_epoch)
+            if v_loss >= prev_v_loss then
+                num_increasing_v_loss = num_increasing_v_loss + 1
+                if opt.stop_criteria_num_epochs > 0 and num_increasing_v_loss >= opt.stop_criteria_num_epochs then
+                    print("Stoppage Criteria met. Stopping after " .. num_increasing_v_loss .. " epochs of increasing validation loss")
+                    break
+                end
+            else
+                num_increasing_v_loss = 0
+            end
             loss_this_epoch = 0.0
             perp_this_epoch = 0.0
         end
