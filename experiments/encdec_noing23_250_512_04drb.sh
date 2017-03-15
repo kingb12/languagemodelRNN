@@ -109,4 +109,4 @@ th EncoderDecoder.lua \
 -run  \
 -gpu \
 -stop_criteria_num_epochs $stop_criteria_num_epochs \
-&& bash eval_encdec_noing23_250_512_04drb.sh
+&& cd experiments && bash eval_encdec_noing23_250_512_04drb.sh

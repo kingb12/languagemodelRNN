@@ -110,4 +110,4 @@ th EncoderDecoder.lua \
 -gpu \
 -bag_of_words '/scratch/kingb12/encdec_lookup_200.th7' \
 -stop_criteria_num_epochs $stop_criteria_num_epochs \
-&& bash eval_encdec_noing15_bow_250_512_04drb.sh
+&& cd experiments && bash eval_encdec_noing15_bow_250_512_04drb.sh
