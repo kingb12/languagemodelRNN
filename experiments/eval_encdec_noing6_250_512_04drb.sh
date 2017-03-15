@@ -16,6 +16,8 @@ outputs='../data/rl_outputs_25.th7'
 in_lengths='../data/rl_in_lengths.th7'
 out_lengths='../data/rl_out_lengths_25.th7'
 helper='../data/rl_helper.th7'
+gen_inputs='[4,209,512,1896,1743,143,865,443,30,201]'
+
 
 valid_enc_inputs='/homes/iws/kingb12/data/rl_vno_ing_6.th7'
 valid_dec_inputs='/homes/iws/kingb12/data/rl_vdec_inputs_25.th7'
@@ -86,6 +88,7 @@ th encdec_evaluation.lua \
 -test_out_lengths $test_out_lengths \
 -num_samples $num_samples \
 -max_sample_length $max_sample_length \
--calculate_bleu -calculate_avg_alignment -calculate_n_pairs_bleu \
+-gen_inputs $gen_inputs \
+-calculate_bleu -calculate_avg_alignment -calculate_n_pairs_bleu -generate_samples \
 -calculate_best_bleu_match  \
 -out $out
