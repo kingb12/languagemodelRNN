@@ -68,6 +68,7 @@ cmd:option('-dec', 'dec.th7')
 cmd:option('-num_samples', 10)
 cmd:option('-max_sample_length', 10)
 cmd:option('-max_gen_example_length', 10)
+cmd:option('-gen_inputs', '', 'A String as JSON encoded list of integers of which training samples to use for generations. For better comparing N models')
 cmd:option('-no_arg_max', false)
 cmd:option('-out', '')
 
@@ -133,9 +134,13 @@ end
 
 -- generate some samples
 if opt.generate_samples then
-    output['train_samples'] = generate_samples(train_enc_inputs, train_outputs, opt.num_samples, opt.max_sample_length)
-    output['valid_samples'] = generate_samples(valid_enc_inputs, valid_outputs, opt.num_samples, opt.max_sample_length)
-    output['test_samples'] = generate_samples(test_enc_inputs, test_outputs, opt.num_samples, opt.max_sample_length)
+    local gen_inputs = nil
+    if opt.gen_inputs ~= '' then
+        gen_inputs = cjson.decode(opt.gen_inputs)
+    end
+    output['train_samples'] = generate_samples(train_enc_inputs, train_outputs, opt.num_samples, opt.max_sample_length, gen_inputs)
+    output['valid_samples'] = generate_samples(valid_enc_inputs, valid_outputs, opt.num_samples, opt.max_sample_length, gen_inputs)
+    output['test_samples'] = generate_samples(test_enc_inputs, test_outputs, opt.num_samples, opt.max_sample_length, gen_inputs)
 end
 
 if opt.calculate_bleu or opt.calculate_n_pairs_bleu or opt.calculate_avg_alignment then

@@ -40,16 +40,22 @@ function sequence_to_string(seq)
     return str
 end
 
-function generate_samples(data_set, outputs, num_samples, max_sample_length)
+function generate_samples(data_set, outputs, num_samples, max_sample_length, gen_inputs)
     if max_sample_length == nil then max_sample_length = 10 end
     local results = {}
     print('Generating Samples...')
     for i = 1, num_samples do
         print('Sample ', i)
         local t_set_idx = (torch.random() % data_set:size(1)) + 1
+        if gen_inputs ~= nil then
+            t_set_idx = (gen_inputs[i] % data_set:size(1)) + 1
+        end
         if t_set_idx > data_set:size(1) then t_set_idx = 1 end
         local example = data_set[t_set_idx]
         local example_no = torch.random() % example:size(1) + 1
+        if gen_inputs ~= nil then
+            example_no = (gen_inputs[i] % example:size(1)) + 1
+        end
         if example_no > example:size(1) then example_no = 1 end
         local x = example[example_no]
         x = x:reshape(1, x:size(1))
