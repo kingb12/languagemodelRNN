@@ -5,7 +5,7 @@ save_dir='/scratch/kingb12/'
 model_name='encdec_noing23_bow_200_512_04drb'
 # common adjustments
 max_epochs=200
-learning_rate=0.0001
+learning_rate=0.00001
 num_samples=7
 max_sample_length=25
 ##################################################### Model Run Options #############################################
