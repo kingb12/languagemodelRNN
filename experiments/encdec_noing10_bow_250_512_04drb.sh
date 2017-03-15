@@ -54,6 +54,8 @@ backup_save_dir=''
 print_acc_every=0
 print_examples_every=0
 valid_loss_every=1
+stop_criteria_num_epochs=2
+
 
 ######################################################### Evaluation Options ##############################################
 
@@ -107,27 +109,5 @@ th EncoderDecoder.lua \
 -run  \
 -gpu \
 -bag_of_words '/scratch/kingb12/encdec_lookup_200.th7' \
-&& \
-th encdec_evaluation.lua \
--train_enc_inputs $enc_inputs \
--train_dec_inputs $dec_inputs \
--train_outputs $outputs \
--train_in_lengths $in_lengths \
--train_out_lengths $out_lengths \
--helper $helper \
--enc $save_prefix'_enc.th7' \
--dec $save_prefix'_dec.th7' \
--valid_enc_inputs $valid_enc_inputs \
--valid_dec_inputs $valid_dec_inputs \
--valid_outputs $valid_outputs \
--valid_in_lengths $valid_in_lengths \
--valid_out_lengths $valid_out_lengths \
--test_enc_inputs $test_enc_inputs \
--test_dec_inputs $test_dec_inputs \
--test_outputs $test_outputs \
--test_in_lengths $test_in_lengths \
--test_out_lengths $test_out_lengths \
--num_samples $num_samples \
--max_sample_length $max_sample_length \
--calculate_perplexity -generate_samples -calculate_bleu -calculate_avg_alignment -calculate_n_pairs_bleu \
--out $out
+-stop_criteria_num_epochs $stop_criteria_num_epochs \
+&& bash eval_encdec_noing10_bow_250_512_04drb.sh
