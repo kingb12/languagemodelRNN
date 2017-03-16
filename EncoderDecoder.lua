@@ -22,6 +22,7 @@ require 'optim'
 require 'LSTM'
 require 'TemporalCrossEntropyCriterion'
 require 'encdec_eval_functions'
+require 'reward'
 cjson = require 'cjson'
 io = require 'io'
 
@@ -265,7 +266,7 @@ else
     cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.hidden_size)
 end
 local hzeros = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.max_in_len-1, opt.hidden_size)
-local w0 = torch.CudaTensor.zeros(torch.CudaTensor.new(), 1, 1)
+local w0 = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, 1)
 -- logging
 if opt.save_model_at_epoch then
     logger = optim.Logger(opt.save_prefix .. '.log')
@@ -308,6 +309,11 @@ end
 local optim_config = {learningRate = learningRate }
 local avg_diff = 0
 local num_diffs = 0
+
+local lsm = nn.Sequential()
+lsm:add(nn.View(-1))
+lsm:add(nn.LogSoftMax())
+lsm:cuda()
 
 
 local function crossentropy_eval(params)
@@ -389,9 +395,9 @@ local function reinforcement_eval(params)
             if w == end_num then
                 break
             end
-            hidden = torch.CudaTensor.zeros(torch.CudaTensor.new(), 1, opt.hidden_size)
-            cell = torch.reshape(dec._rnns[1].cell, 1, dec._rnns[1].cell:size(3))
-            word = torch.CudaTensor.zeros(torch.CudaTensor.new(), 1, 1)
+            hidden = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.hidden_size)
+            cell = torch.reshape(dec._rnns[1].cell, opt.batch_size, dec._rnns[1].cell:size(3))
+            word = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, 1)
             word[1][1] = w
             cur_dec_in = {cell, hidden, word}
         end

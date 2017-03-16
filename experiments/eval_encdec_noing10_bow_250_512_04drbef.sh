@@ -73,7 +73,6 @@ th encdec_evaluation.lua \
 -train_in_lengths $in_lengths \
 -train_out_lengths $out_lengths \
 -helper $helper \
--init_output_from $out \
 -enc $save_prefix'_enc.th7' \
 -dec $save_prefix'_dec.th7' \
 -valid_enc_inputs $valid_enc_inputs \
