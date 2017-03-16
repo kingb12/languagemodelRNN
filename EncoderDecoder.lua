@@ -13,6 +13,8 @@ require 'nn'
 require 'nnx'
 require 'nngraph'
 require 'util'
+require 'math'
+require 'learning_rate'
 -- require 'torch-rnn'
 require 'DynamicView'
 require 'Sampler'
@@ -69,6 +71,8 @@ cmd:option('-max_epochs', 50)
 cmd:option('-learning_rate', 0.1)
 cmd:option('-lr_decay', 0.0)
 cmd:option('-algorithm', 'adam')
+cmd:option('-reinforcement', false)
+cmd:option('-reward_threshold', 1)
 
 --Output Options
 cmd:option('-print_loss_every', 1000)
@@ -88,6 +92,9 @@ local opt = cmd:parse(arg)
 local tensorType = 'torch.FloatTensor'
 local learningRate = opt.learning_rate
 local dropout = opt.dropout > 0.0
+local pad_num = 1
+local beg_num = 2
+local end_num = 3
 
 -- Choosing between GPU/CPU Mode
 if opt.gpu then
@@ -258,7 +265,7 @@ else
     cb = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.hidden_size)
 end
 local hzeros = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.max_in_len-1, opt.hidden_size)
-
+local w0 = torch.CudaTensor.zeros(torch.CudaTensor.new(), 1, 1)
 -- logging
 if opt.save_model_at_epoch then
     logger = optim.Logger(opt.save_prefix .. '.log')
@@ -299,10 +306,14 @@ local function print_info(learningRate, iteration, currentError, v_loss, v_perp,
 end
 
 local optim_config = {learningRate = learningRate }
+local avg_diff = 0
+local num_diffs = 0
 
 
-local function feval(params)
+local function crossentropy_eval(params)
     gradParams:zero()
+    for _, v in pairs(enc._rnns) do  v:resetStates() end
+    for _, v in pairs(dec._rnns) do  v:resetStates() end
 
     -- retrieve inputs for this batch
     local enc_input = enc_inputs[batch]
@@ -310,8 +321,6 @@ local function feval(params)
     local output = outputs[batch]
 
     -- forward pass
-    for _,v in pairs(enc._rnns) do v:resetStates() end
-    for _,v in pairs(dec._rnns) do v:resetStates() end
     local enc_fwd = enc:forward(enc_input) -- enc_fwd is h1...hN
     local dec_h0 = enc_fwd[{{}, opt.max_in_len, {}}] -- grab the last hidden state from the encoder, which will be at index max_in_len
     local dec_fwd = dec:forward({cb:clone(), dec_h0, dec_input}) -- forwarding a new zeroed cell state, the encoder hidden state, and frame-shifted expected output (like LM)
@@ -339,13 +348,91 @@ local function feval(params)
     return loss, gradParams
 end
 
+function run_one_batch(algorithm)
+    if algorithm == 'adam' then
+        return optim.adam(crossentropy_eval, params, optim_config)
+    else
+        return optim.sgd(crossentropy_eval, params, optim_config)
+    end
+end
+
+local function reinforcement_eval(params)
+    gradParams:zero()
+    for _, v in pairs(enc._rnns) do  v:resetStates() end
+    for _, v in pairs(dec._rnns) do  v:resetStates() end
+
+    -- retrieve inputs for this batch
+    local enc_input = enc_inputs[batch]
+    local dec_input = dec_inputs[batch]
+    local output = outputs[batch]
+    local r = reward_maker(output) -- returns a reward function based on output/target
+
+    -- generate first sample
+    local enc_fwd = enc:forward(enc_input) -- enc_fwd is h1...hN
+    local dec_h0 = enc_fwd[{{}, opt.max_in_len, {}}] -- grab the last hidden state from the encoder, which will be at index max_in_len
+
+    local s1, s2, r1, r2, ll1, ll2  --sentence 1 & 2, reward 1 & 2, log_likelihoods 1 & 2
+    local diff = 0
+
+    local function get_sample_output(r, dec_h0)
+        local s1 = torch.zeros(1, opt.max_out_len):cuda()
+        local ll1 = 0
+        local cell = cb:clone()
+        local hidden = dec_h0:clone()
+        local word = w0:clone()
+        local cur_dec_in = {cell, hidden, w0}
+        for t = 1, opt.max_out_len do
+            local dec_fwd = dec:forward(cur_dec_in)
+            local w  = torch.multinomial(dec_fwd[1], 1)[1]
+            s1[1][t] = w
+            ll1 = ll1 + lsm:forward(dec_fwd)[w]
+            if w == end_num then
+                break
+            end
+            hidden = torch.CudaTensor.zeros(torch.CudaTensor.new(), 1, opt.hidden_size)
+            cell = torch.reshape(dec._rnns[1].cell, 1, dec._rnns[1].cell:size(3))
+            word = torch.CudaTensor.zeros(torch.CudaTensor.new(), 1, 1)
+            word[1][1] = w
+            cur_dec_in = {cell, hidden, word}
+        end
+        s1[1][1] = beg_num
+        local r1 = r(s1)
+        return s1, r1, ll1
+    end
+    s1, r1, ll1 = get_sample_output(r, dec_h0)
+    while not s2 or diff < opt.reward_threshold do
+        s2, r2, ll2 = get_sample_output(r, dec_h0)
+        diff = math.abs(r1 - r2)
+    end
+    avg_diff = ((avg_diff * num_diffs) + diff) / (num_diffs + 1)
+    num_diffs = num_diffs + 1
+    if r2 > r1 then
+        local temp
+        temp = s1; s1 = s2; s2 = temp
+        temp = r1; r1 = r2; r2 = temp
+        temp = ll1; ll1 = ll2; ll2 = temp
+    end
+
+    --adjust learning rate by reward
+    local p1 = math.exp(ll1)
+    local dynamic_learning_rate = learning_rate(optim_config.learning_rate, p1, diff, avg_diff)
+    optim_config.learning_rate = dynamic_learning_rate
+
+    return run_one_batch(opt.algorithm)
+end
+
 function train_model()
     while (epoch < opt.max_epochs) do
         local examples = (batch-1)*opt.batch_size
         local output = outputs[batch]
         local out_length = out_lengths[batch]
         local in_length = in_lengths[{{examples+1, examples+opt.batch_size}}]
-        local _, loss = run_one_batch(opt.algorithm)
+        local loss, _
+        if opt.reinforcement then
+            _, loss = reinforcement_eval(params)
+        else
+            _, loss = run_one_batch(opt.algorithm)
+        end
         local normed_loss = loss[1] / (torch.sum(out_length) / enc_inputs[batch]:size(1))
         loss_this_epoch = loss_this_epoch + (normed_loss / enc_inputs:size(1))
         perp_this_epoch = perp_this_epoch + (torch.exp(normed_loss) / enc_inputs:size(1))
@@ -419,14 +506,6 @@ function train_model()
             end
             print('------------------')
         end
-    end
-end
-
-function run_one_batch(algorithm)
-    if algorithm == 'adam' then
-        return optim.adam(feval, params, optim_config)
-    else
-        return optim.sgd(feval, params, optim_config)
     end
 end
 
