@@ -62,8 +62,8 @@ cmd:option('-num_enc_layers', 1)
 cmd:option('-num_dec_layers', 1)
 cmd:option('-weights', '')
 cmd:option('-no_average_loss', false)
-cmd:option('-enc_remember_states', false)
-cmd:option('-dec_remember_states', false)
+cmd:option('-enc_forget_states', false)
+cmd:option('-dec_forget_states', false)
 cmd:option('-bag_of_words', '', 'encoder is replaced with a bag of words approach')
 cmd:option('-bow_no_linear', false, 'only meaningful in bag_of_words context. no linear projection to hidden size, all are wordvec_size')
 
@@ -147,7 +147,7 @@ if opt.init_enc_from == '' then
         else
             lstm = nn.LSTM(opt.hidden_size, opt.hidden_size)
         end
-        if opt.enc_remember_states then
+        if not opt.enc_forget_states then
             lstm.remember_states = true
         end
         enc._rnns[#enc._rnns + 1] = lstm
@@ -225,7 +225,7 @@ if opt.init_dec_from == '' then
             lstm_n = lstm(previous)
             previous = lstm_n
         end
-        if opt.dec_remember_states then
+        if not opt.dec_forget_states then
             lstm.remember_states = true
         end
         dec_rnns[#dec_rnns + 1] = lstm
@@ -395,8 +395,7 @@ local function reinforcement_eval(params)
             if w == end_num then
                 break
             end
-            hidden = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, opt.hidden_size)
-            cell = torch.reshape(dec._rnns[1].cell, opt.batch_size, dec._rnns[1].cell:size(3))
+            -- just using remember_states. Specifying forget_states for enc/dec will cause a logical error
             word = torch.CudaTensor.zeros(torch.CudaTensor.new(), opt.batch_size, 1)
             word[1][1] = w
             cur_dec_in = {cell, hidden, word}
